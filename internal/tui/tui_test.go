@@ -21,9 +21,15 @@ type listing struct {
 	refs []resources.Ref
 }
 
-func (l listing) Listed() []resources.Ref { return l.refs }
-func (l listing) Tag() string             { return "po" }
-func (l listing) Objects() []string       { return []string{"Pod"} }
+func (l listing) Listed() []resources.Ref       { return l.refs }
+func (l listing) Tag() string                   { return "po" }
+func (l listing) Objects() []string             { return []string{"Pod"} }
+func (l listing) Available() bool               { return true }
+func (l listing) Ready() bool                   { return true }
+func (l listing) Empty() string                 { return "" }
+func (l listing) Columns() []resources.Column   { return nil }
+func (l listing) Rows() []resources.Row         { return nil }
+func (l listing) Indicators() []resources.Indicator { return nil }
 
 func TestChangesAreTaggedByKind(t *testing.T) {
 	m := &model{kinds: []resources.Resource{listing{}}}
@@ -238,22 +244,39 @@ func TestDividerMoves(t *testing.T) {
 }
 
 func TestSectionToggles(t *testing.T) {
-	m := &model{kinds: registry()}
+	pods := toggleResource{name: "pods"}
+	secrets := toggleResource{name: "secrets"}
+	m := &model{kinds: []resources.Resource{pods, secrets}, started: map[string]bool{"pods": true, "secrets": true}}
 	s := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")}
-	byName := map[string]resources.Resource{}
-	for _, k := range m.kinds {
-		byName[k.Name()] = k
-	}
-	secrets, pods := byName["secrets"], byName["pods"]
 	m.pageKey(s)
 	if m.page.shown(secrets) || !m.page.shown(pods) {
 		t.Fatal("s hides only the secrets section")
+	}
+	if m.started["secrets"] {
+		t.Fatal("hiding a section should stop it")
 	}
 	m.pageKey(s)
 	if !m.page.shown(secrets) {
 		t.Fatal("s again shows it again")
 	}
 }
+
+// toggleResource is a minimal kind for toggle tests.
+type toggleResource struct{ name string }
+
+func (r toggleResource) Name() string                          { return r.name }
+func (r toggleResource) Tag() string                           { return r.name[:2] }
+func (r toggleResource) Objects() []string                     { return nil }
+func (r toggleResource) Available() bool                       { return true }
+func (r toggleResource) Ready() bool                           { return true }
+func (r toggleResource) Start(resources.Host) tea.Cmd          { return nil }
+func (r toggleResource) Stop()                                 {}
+func (r toggleResource) Update(tea.Msg) tea.Cmd                { return nil }
+func (r toggleResource) Columns() []resources.Column           { return nil }
+func (r toggleResource) Rows() []resources.Row                 { return nil }
+func (r toggleResource) Empty() string                         { return "" }
+func (r toggleResource) Indicators() []resources.Indicator     { return nil }
+func (r toggleResource) Listed() []resources.Ref               { return nil }
 
 func TestNarrowTableShrinksThenDrops(t *testing.T) {
 	tb := table{

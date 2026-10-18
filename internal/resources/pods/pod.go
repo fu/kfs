@@ -338,10 +338,22 @@ type Container struct {
 	Message  string // why it is waiting, e.g. `secret "x" not found`
 	Restarts int32
 	Last     Termination // current or previous termination
+
+	// Per-container requests and limits (same as a single-container pod's).
+	CPUReq, CPULim int64 // millicores (0 = unbounded)
+	MemReq, MemLim int64 // bytes (0 = unbounded)
 }
 
 func newContainer(c *corev1.Container, kind ContainerKind, statuses map[string]corev1.ContainerStatus) Container {
 	ci := Container{Name: c.Name, Image: c.Image, Kind: kind, State: "Waiting"}
+	ci.CPUReq = c.Resources.Requests.Cpu().MilliValue()
+	ci.MemReq = c.Resources.Requests.Memory().Value()
+	if l := c.Resources.Limits.Cpu().MilliValue(); l > 0 {
+		ci.CPULim = l
+	}
+	if l := c.Resources.Limits.Memory().Value(); l > 0 {
+		ci.MemLim = l
+	}
 	if cs, ok := statuses[c.Name]; ok {
 		ci.Ready, ci.Restarts = cs.Ready, cs.RestartCount
 		switch s := cs.State; {

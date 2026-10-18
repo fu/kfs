@@ -8,27 +8,41 @@ import (
 	"github.com/fu/k7s/internal/resources/restest"
 )
 
-func TestSeveralContainersAskWhich(t *testing.T) {
+func TestSubRowSelectsContainerDirectly(t *testing.T) {
 	h := &restest.Host{}
 	opened := ""
 	open := func(_ pods.Row, c pods.Container) resources.Step { opened = c.Name; return &resources.Viewer{} }
-	pod := pods.Row{Namespace: "ns", Name: "a", Containers: []pods.Container{
-		{Name: "init", Kind: pods.KindInit}, {Name: "app"}, {Name: "proxy", Kind: pods.KindSidecar},
-	}}
 
-	p, ok := choose(h, pod, nil, "logs", false, open).(*resources.Picker)
-	if !ok || len(p.Rows) != 3 || p.Current != "app" {
-		t.Fatalf("logs: want a picker over 3 containers starting on app, got %+v", p)
+	// Sub-row: picks the named container directly.
+	r := pods.New()
+	r.AddForTest(pods.Row{Namespace: "ns", Name: "a", Containers: []pods.Container{
+		{Name: "init", Kind: pods.KindInit}, {Name: "app"}, {Name: "proxy", Kind: pods.KindSidecar},
+	}})
+	tgt := resources.Target{Host: h, Kind: r, Key: "ns/a/proxy", Sub: "proxy"}
+	step := pickContainer(tgt, false, open)
+	if _, ok := step.(*resources.Viewer); !ok || opened != "proxy" {
+		t.Errorf("sub-row proxy: opened %q", opened)
 	}
-	if _, ok := p.Pick("proxy").(*resources.Viewer); !ok || opened != "proxy" {
-		t.Errorf("picking proxy opens it, opened %q", opened)
+
+	// Multi-container parent row (no Sub): notice, no picker.
+	opened = ""
+	tgt = resources.Target{Host: h, Kind: r, Key: "ns/a"}
+	step = pickContainer(tgt, false, open)
+	if step != nil {
+		t.Error("multi-container parent: no step expected")
 	}
-	if p, ok := choose(h, pod, nil, "shell", true, open).(*resources.Picker); !ok || len(p.Rows) != 2 {
-		t.Fatalf("shell: init containers are not offered, got %+v", p)
+	if h.Notices() == "" {
+		t.Error("multi-container parent: expected a notice")
 	}
-	single := pods.Row{Namespace: "ns", Name: "b", Containers: []pods.Container{{Name: "app"}}}
-	if _, ok := choose(h, single, nil, "logs", false, open).(*resources.Viewer); !ok {
-		t.Error("a single container opens straight away")
+
+	// Single-container pod: opens straight away.
+	r2 := pods.New()
+	r2.AddForTest(pods.Row{Namespace: "ns", Name: "b", Containers: []pods.Container{{Name: "app"}}})
+	opened = ""
+	tgt = resources.Target{Host: h, Kind: r2, Key: "ns/b"}
+	step = pickContainer(tgt, false, open)
+	if _, ok := step.(*resources.Viewer); !ok || opened != "app" {
+		t.Errorf("single container: opened %q", opened)
 	}
 }
 

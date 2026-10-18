@@ -114,18 +114,23 @@ func (m *model) actions() []action {
 		return nil
 	}
 	var ref resources.Ref
+	var sub string
 	for _, r := range m.rows(k) {
 		if r.Key == key {
 			ref = r.Ref
+			sub = r.Sub
 		}
 	}
 	cmds := kindCommands(k.Name())
 	if ref.Kind != "" {
 		cmds = append(cmds, commands.All()...)
 	}
-	target := resources.Target{Host: kindHost{m, k}, Kind: k, Key: key, Ref: ref}
+	target := resources.Target{Host: kindHost{m, k}, Kind: k, Key: key, Ref: ref, Sub: sub}
 	var out []action
 	for _, c := range cmds {
+		if c.Enabled != nil && !c.Enabled(target) {
+			continue
+		}
 		for i, keyName := range m.page.cfg.CommandKeys(k.Name(), c.Name) {
 			a := action{key: keyName, do: func() resources.Step { return c.Run(target) }}
 			if i == 0 {
@@ -180,10 +185,19 @@ func (m *model) pageKey(msg tea.KeyMsg) tea.Cmd {
 	for _, k := range m.kinds {
 		if key == toggleKey(k) {
 			m.page.toggle(k)
+			var cmd tea.Cmd
+			if m.page.shown(k) && !m.started[k.Name()] {
+				cmd = k.Start(kindHost{m, k})
+				m.started[k.Name()] = true
+			} else if !m.page.shown(k) && m.started[k.Name()] {
+				k.Stop()
+				delete(m.started, k.Name())
+			}
+			m.listedAt = time.Time{} // invalidate cache: sections changed
 			if err := m.page.cfg.Save(); err != nil {
 				m.Notice("config: " + err.Error())
 			}
-			return nil
+			return cmd
 		}
 	}
 	for _, a := range m.actions() {
@@ -214,10 +228,28 @@ func (m *model) pageKey(msg tea.KeyMsg) tea.Cmd {
 		m.changes.back = max(0, m.changes.back-1)
 	case "Q": // move the divider up: a taller change log
 		m.page.grow = m.layout().changes - m.defaultChanges() + 1
+		m.saveChangesPct()
 	case "A": // and down
 		m.page.grow = m.layout().changes - m.defaultChanges() - 1
+		m.saveChangesPct()
 	}
 	return nil
+}
+
+// saveChangesPct folds the divider's current position into the config so the
+// next start opens with the same split. The in-session offset (page.grow) is
+// left alone: defaultChanges() is fixed within a session, so grow keeps
+// meaning "lines off from default".
+func (m *model) saveChangesPct() {
+	if m.page.cfg == nil {
+		return
+	}
+	avail := m.height - 2 - 1 - 2 - 3
+	if avail <= 0 {
+		return
+	}
+	m.page.cfg.SetChangesPct(m.layout().changes * 100 / avail)
+	_ = m.page.cfg.Save()
 }
 
 // ---- rendering ---------------------------------------------------------------
@@ -227,14 +259,32 @@ type layout struct {
 	changes int
 }
 
-// defaultChanges is the change log's height before Q / A move the divider.
+// defaultChanges is the change log's height before any resize: kept stable
+// within a session so Q / A move the divider by one line and nothing else.
+// The pct saved in the config is applied once, at start and on resize,
+// through applySavedPct.
 func (m *model) defaultChanges() int { return max(4, min(12, m.height/3)) }
 
+// applySavedPct sets page.grow from the change-log pct the config saved, so
+// the page opens (and re-opens on resize) at the remembered split. Called on
+// WindowSizeMsg, which fires at start and on every resize.
+func (m *model) applySavedPct() {
+	pct := m.page.cfg.ChangesPct()
+	if pct <= 0 {
+		return
+	}
+	avail := m.height - 2 - 1 - 2 - 3
+	if avail <= 0 {
+		return
+	}
+	m.page.grow = avail*pct/100 - m.defaultChanges()
+}
+
 func (m *model) layout() layout {
-	// status line + blank + body + changes rule + changes + navigation bar;
+	// status line + blank + body + changes rule + changes + two nav bar lines;
 	// the change log keeps at least 2 lines, the sections at least 3.
-	l := layout{changes: max(2, min(m.height-2-1-1-3, m.defaultChanges()+m.page.grow))}
-	l.body = max(1, m.height-2-1-l.changes-1)
+	l := layout{changes: max(2, min(m.height-2-1-2-3, m.defaultChanges()+m.page.grow))}
+	l.body = max(1, m.height-2-1-l.changes-2)
 	return l
 }
 
@@ -250,15 +300,14 @@ func (m *model) statusLine() string {
 		}
 	}
 	ready := true
-	for _, k := range m.kinds {
+	for _, k := range m.sections() {
 		ready = ready && k.Ready()
 	}
+	right := yellow.Render("○ syncing")
 	if ready {
-		parts = append(parts, m.pulse()+" "+cyan.Render("watching"))
-	} else {
-		parts = append(parts, yellow.Render("○ syncing"))
+		right = m.pulse() + " " + cyan.Render("watching")
 	}
-	return clip(joinParts(parts), m.width)
+	return alignLR(joinParts(parts), right, m.width)
 }
 
 // sectionStatus is a section's part of the status line: its name and the
@@ -367,12 +416,14 @@ func (m *model) pageView() string {
 			cmds = append(cmds, a.hint)
 		}
 	}
-	cmds = append(cmds, "[q/a] changes", "[Q/A] resize", "[esc] quit")
 	line := strings.Join(cmds, "  ")
 	if m.page.jumpBuf != "" && time.Since(m.page.jumpAt) < jumpWindow {
 		line = "go to #[" + m.page.jumpBuf + "]"
 	}
-	b.WriteString(m.navBar(hints(line)))
+	tui := hints("[q/a] scroll changes  [Q/A] resize TUI  [esc] quit")
+	b.WriteString(m.navBarCommands(hints(line), tui))
+	b.WriteByte('\n')
+	b.WriteString(m.navBarResources())
 	return b.String()
 }
 

@@ -97,7 +97,8 @@ type model struct {
 	info   Info
 
 	kinds   []resources.Resource
-	screens []screen // the top one is shown
+	started map[string]bool // which kinds are currently watching (lazy-loaded)
+	screens []screen        // the top one is shown
 	page    page
 	changes changeLog
 
@@ -123,7 +124,7 @@ func Run(ctx context.Context, flags *genericclioptions.ConfigFlags, client *kube
 	}
 	setPalette(info.Config.Colors)
 
-	m := &model{ctx: ctx, flags: flags, client: client, info: info, kinds: ordered(info.Config, registry())}
+	m := &model{ctx: ctx, flags: flags, client: client, info: info, kinds: ordered(info.Config, registry()), started: map[string]bool{}}
 	m.page.cfg = info.Config
 	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithContext(ctx))
 	m.send = p.Send
@@ -146,15 +147,20 @@ func pulseTick() tea.Cmd {
 
 func (m *model) Init() tea.Cmd { return tea.Batch(pulseTick(), m.start()) }
 
-// start (re)starts every kind and the event watch for the current scope.
+// start (re)starts every visible kind and the event watch for the current
+// scope; hidden kinds are left idle until toggled on.
 func (m *model) start() tea.Cmd {
 	m.changes.reset()
 	m.page.reset()
 	m.listedAt = time.Time{}
+	m.started = map[string]bool{}
 	m.watchEvents()
 	var cmds []tea.Cmd
 	for _, k := range m.kinds {
-		cmds = append(cmds, k.Start(kindHost{m, k}))
+		if m.page.shown(k) {
+			cmds = append(cmds, k.Start(kindHost{m, k}))
+			m.started[k.Name()] = true
+		}
 	}
 	return tea.Batch(cmds...)
 }
@@ -177,6 +183,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		m.applySavedPct()
 		return m, nil
 	case pulseMsg:
 		return m, pulseTick()
@@ -278,7 +285,7 @@ func (m *model) View() string {
 		return "starting…"
 	}
 	if top := m.top(); top != nil {
-		return fitLines(top.view(m.width, m.height-1), m.height-1) + "\n" + m.navBar(top.hints())
+		return fitLines(top.view(m.width, m.height-2), m.height-2) + "\n" + m.navBarCommands(top.hints(), "") + "\n" + m.navBarResources()
 	}
 	return m.pageView()
 }
@@ -314,7 +321,7 @@ func (m *model) Pulse(at time.Time)       { m.pulseAt = at }
 func (m *model) Listed() []resources.Ref {
 	if time.Since(m.listedAt) > 200*time.Millisecond {
 		m.listed = m.listed[:0]
-		for _, k := range m.kinds {
+		for _, k := range m.sections() {
 			m.listed = append(m.listed, k.Listed()...)
 		}
 		m.listedAt = time.Now()
@@ -336,33 +343,46 @@ func toggleKey(k resources.Resource) string {
 	return k.Name()[:1]
 }
 
-// navBar: the scope menus (highlighted while their picker is open), the
-// section toggles (highlighted while shown), then the commands of what is
-// on screen — or a recent notice such as an error. Each menu is its name
-// with its key letter in cyan.
-func (m *model) navBar(cmds string) string {
-	item := func(name, letter string, on bool) string {
-		st, key := menu, menu.Foreground(infoColor).Bold(true)
-		if on {
-			st, key = menuActive, menuActive.Underline(true)
-		}
-		i := max(0, strings.Index(name, letter))
-		return st.Render(" "+name[:i]) + key.Render(name[i:i+1]) + st.Render(name[i+1:]+" ") + " "
+// navBarItem renders a menu or toggle item: its name with the key letter
+// highlighted. When on (picker open / section shown) the whole item is
+// underlined and active.
+func navBarItem(name, letter string, on bool) string {
+	st, key := menu, menu.Foreground(infoColor).Bold(true)
+	if on {
+		st, key = menuActive, menuActive.Underline(true)
 	}
+	i := max(0, strings.Index(name, letter))
+	return st.Render(" "+name[:i]) + key.Render(name[i:i+1]) + st.Render(name[i+1:]+" ") + " "
+}
+
+// navBarCommands: the scope menus (highlighted while their picker is open)
+// and the commands of what is on screen — or a recent notice such as an
+// error. Each menu is its name with its key letter in cyan. right (if any)
+// sits at the far right of the line.
+func (m *model) navBarCommands(cmds, right string) string {
 	open := ""
 	if p, ok := m.top().(*pickerScreen); ok {
 		open = p.scope
 	}
 	var b strings.Builder
 	for _, s := range scopes {
-		b.WriteString(item(s, s[:1], s == open))
-	}
-	b.WriteString(dim.Render("│ "))
-	for _, k := range m.kinds {
-		b.WriteString(item(k.Name(), toggleKey(k), m.page.shown(k)))
+		b.WriteString(navBarItem(s, s[:1], s == open))
 	}
 	if m.notice != "" && time.Since(m.noticeAt) < 6*time.Second {
 		cmds = yellow.Render(m.notice)
 	}
-	return clip(b.String()+" "+cmds, m.width)
+	left := b.String() + " " + cmds
+	if right == "" {
+		return clip(left, m.width)
+	}
+	return alignLR(left, right, m.width)
+}
+
+// navBarResources: the section toggles (highlighted while shown).
+func (m *model) navBarResources() string {
+	var b strings.Builder
+	for _, k := range m.kinds {
+		b.WriteString(navBarItem(k.Name(), toggleKey(k), m.page.shown(k)))
+	}
+	return clip(b.String(), m.width)
 }

@@ -325,3 +325,14 @@ func (r *Resource) resort() {
 	}
 	sort.Strings(r.order)
 }
+
+// AddForTest inserts a pod row; only for testing.
+func (r *Resource) AddForTest(row Row) {
+	if r.rows == nil {
+		r.rows = map[string]*rowState{}
+	}
+	key := row.Key()
+	r.rows[key] = &rowState{row: row, changed: map[string]time.Time{}}
+	r.resort()
+	r.synced = true
+}

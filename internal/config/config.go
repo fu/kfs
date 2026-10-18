@@ -25,7 +25,8 @@ import (
 //	2  + hide
 //	3  + commands, resource_order
 //	4  + status
-const Version = 4
+//	5  + layout
+const Version = 5
 
 //go:embed default.yaml
 var defaultYAML []byte
@@ -44,6 +45,8 @@ type Config struct {
 	// Status lists, per section ("*" for every section), what it shows in
 	// the status line, e.g. pods: [lights, forwards].
 	Status map[string][]string `yaml:"status"`
+	// Layout remembers where the divider sits between sections and change log.
+	Layout Layout `yaml:"layout"`
 	// Namespaces is the last namespace per context, used when -n is not given.
 	Namespaces map[string]string `yaml:"namespaces,omitempty"`
 	Colors     Colors            `yaml:"colors"`
@@ -54,6 +57,12 @@ type Config struct {
 
 type Sections struct {
 	Hidden []string `yaml:"hidden"`
+}
+
+// Layout remembers where the divider between the sections and the change log
+// sits, as the change log's share of the space (5–95, percent).
+type Layout struct {
+	ChangesPct int `yaml:"changes_pct"`
 }
 
 // Colors are "#rrggbb" or ANSI numbers ("0"–"255").
@@ -155,6 +164,9 @@ func (c *Config) fill(d *Config) {
 		if _, ok := c.Status[section]; !ok {
 			c.Status[section] = items
 		}
+	}
+	if c.Layout.ChangesPct == 0 {
+		c.Layout.ChangesPct = d.Layout.ChangesPct
 	}
 	for _, f := range []struct {
 		v *string
@@ -275,6 +287,20 @@ func (c *Config) SetNamespace(context, ns string) {
 		c.Namespaces = map[string]string{}
 	}
 	c.Namespaces[context] = ns
+}
+
+// ChangesPct is the change log's share of the space (5–95, percent); 0 when
+// unset, in which case the caller falls back to its default.
+func (c *Config) ChangesPct() int {
+	if c == nil || c.Layout.ChangesPct <= 0 {
+		return 0
+	}
+	return max(5, min(95, c.Layout.ChangesPct))
+}
+
+// SetChangesPct stores the change log's share of the space (clamped 5–95).
+func (c *Config) SetChangesPct(pct int) {
+	c.Layout.ChangesPct = max(5, min(95, pct))
 }
 
 // toggle removes s from list, and adds it back when on; never nil.

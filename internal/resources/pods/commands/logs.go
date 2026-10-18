@@ -18,9 +18,10 @@ const tailLines = 500
 
 // Logs follows a container's logs like "kubectl logs -f --tail=500".
 var Logs = resources.Command{
-	Name: "logs",
+	Name:    "logs",
+	Enabled: func(t resources.Target) bool { return t.Sub != "" || !multiContainer(t) },
 	Run: func(t resources.Target) resources.Step {
-		return pickContainer(t, "logs", false, func(pod pods.Row, c pods.Container) resources.Step {
+		return pickContainer(t, false, func(pod pods.Row, c pods.Container) resources.Step {
 			return logs(t.Host.Client(), pod, c.Name, false)
 		})
 	},
@@ -29,9 +30,10 @@ var Logs = resources.Command{
 // PreviousLogs shows the logs of a container's previous run, like
 // "kubectl logs -p": why it crashed before the restart.
 var PreviousLogs = resources.Command{
-	Name: "previous-logs",
+	Name:    "previous-logs",
+	Enabled: func(t resources.Target) bool { return t.Sub != "" || !multiContainer(t) },
 	Run: func(t resources.Target) resources.Step {
-		return pickContainer(t, "previous logs", false, func(pod pods.Row, c pods.Container) resources.Step {
+		return pickContainer(t, false, func(pod pods.Row, c pods.Container) resources.Step {
 			if c.Restarts == 0 {
 				t.Host.Notice("container " + c.Name + " has not restarted: no previous logs")
 				return nil

@@ -36,10 +36,13 @@ func linked(sel resources.Ref, links []resources.Link) map[resources.Ref]bool {
 	return out
 }
 
-// pageLinks collects the links of every kind that has some.
+// pageLinks collects the links of every started kind.
 func (m *model) pageLinks() []resources.Link {
 	var out []resources.Link
 	for _, k := range m.kinds {
+		if !m.started[k.Name()] {
+			continue
+		}
 		if l, ok := k.(resources.Linker); ok {
 			out = append(out, l.Links()...)
 		}

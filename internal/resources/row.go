@@ -24,6 +24,7 @@ type Row struct {
 	State  string // one of the kind's States, so the user can hide it
 	Cells  []Cell // one per column
 	Struck bool   // deleted, lingering for a moment
+	Sub    string // non-empty: a sub-element of the row above (e.g. container name)
 }
 
 // Cell is one table cell, or a part of a status or change line.

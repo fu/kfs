@@ -50,10 +50,15 @@ homebrew_casks:
     commit_author:
       name: Christian Fufezan
       email: christian@fufezan.net
-    hooks:
-      post:
-        # The binaries are not notarized; let macOS run them anyway.
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/k7s"]
-          end
+    # The binaries are not notarized; let macOS run them anyway.
+    # hooks.post.install would emit the deprecated `postflight` stanza;
+    # hooks.post.install_steps (emitting `postflight_steps`) lands in v2.19.
+    # Until then, write the block by hand. The {{ "{{staged_path}}" }}
+    # escaping keeps GoReleaser's template engine from consuming Homebrew's
+    # {{staged_path}} interpolation.
+    custom_block: |
+      postflight_steps do
+        on_macos do
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{staged_path}}" }}/k7s"]
+        end
+      end

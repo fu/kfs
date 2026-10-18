@@ -134,6 +134,17 @@ func wrap(s string, width, first, rest int) []string {
 // clip cuts a styled line to w cells without breaking ANSI sequences.
 func clip(s string, w int) string { return lipgloss.NewStyle().MaxWidth(w).Render(s) }
 
+// alignLR puts left at the left edge and right at the right edge of a
+// w-cell line, padding the middle with spaces. If they do not both fit, the
+// line is clipped (left wins; right is what gets cut).
+func alignLR(left, right string, w int) string {
+	gap := w - lipgloss.Width(left) - lipgloss.Width(right)
+	if gap < 0 {
+		gap = 0
+	}
+	return clip(left+strings.Repeat(" ", gap)+right, w)
+}
+
 // hints renders commands: the part in [brackets] is the key and shows in
 // cyan (ideally a letter of the word, as in "s[h]ell"), the rest dim.
 func hints(s string) string {

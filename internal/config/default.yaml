@@ -5,7 +5,7 @@
 # comments do not survive there. Edit it while k7s is not running.
 
 # The file format. k7s migrates older files and never overwrites a newer one.
-version: 4
+version: 5
 
 # The order of the sections, top to bottom (and in the menu). Sections not
 # listed follow in this order.
@@ -31,6 +31,12 @@ sections:
 hide:
   pods: [completed]
   replicasets: [old]
+
+# Where the divider sits between the sections and the change log, as the
+# change log's share of the space in percent (5–95). k7s updates this on the
+# fly when you press Q / A and restores it on the next start.
+layout:
+  changes_pct: 33
 
 # What each section on the page shows in the status line, after its name;
 # "*" adds to every section ("pods: []" leaves pods only the "*" items).

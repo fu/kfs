@@ -10,6 +10,10 @@ type Command struct {
 	Name string
 	// Run does it for the selected row; it may act directly and return nil.
 	Run func(t Target) Step
+	// Enabled, when set, decides whether the command applies to a specific
+	// row; nil means always enabled (the command itself returns nil for
+	// rows it cannot serve). Used to hide commands from the hints.
+	Enabled func(t Target) bool
 }
 
 // Target is the row a command runs on.
@@ -18,4 +22,5 @@ type Target struct {
 	Kind Resource // the kind showing the row, e.g. *pods.Resource
 	Key  string   // the row's key in that kind
 	Ref  Ref      // the object it shows
+	Sub  string   // sub-element of the row (e.g. container name)
 }

@@ -142,6 +142,37 @@ func TestEmptyHideIsKept(t *testing.T) {
 	}
 }
 
+func TestChangesPctRoundTrips(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.ChangesPct(); got != 33 {
+		t.Errorf("default changes_pct = %d, want 33", got)
+	}
+	c.SetChangesPct(50)
+	if err := c.Save(); err != nil {
+		t.Fatal(err)
+	}
+	c2, _ := Load(path)
+	if got := c2.ChangesPct(); got != 50 {
+		t.Errorf("reloaded changes_pct = %d, want 50", got)
+	}
+}
+
+func TestOldFileGetsLayoutDefault(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	os.WriteFile(path, []byte("version: 4\nsections:\n  hidden: [pods]\n"), 0o644)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.ChangesPct(); got != 33 {
+		t.Errorf("v4 file changes_pct = %d, want default 33", got)
+	}
+}
+
 func TestNewerFileIsNeverOverwritten(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	newer := "version: 99\nsections:\n  hidden: [pods]\nsomethingNew: true\n"

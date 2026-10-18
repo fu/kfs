@@ -19,15 +19,21 @@ func Print(ctx context.Context, client *kube.Client, info Info, w io.Writer) err
 	defer cancel()
 	h := &onceHost{ctx: ctx, client: client, info: info, msgs: make(chan tea.Msg, 1024), kinds: ordered(info.Config, registry())}
 	for _, k := range h.kinds {
+		if !k.Available() || (info.Config != nil && info.Config.Hidden(k.Name())) {
+			continue
+		}
 		h.run(k.Start(h))
 	}
 
-	// Feed the kinds their messages until all have their first list, plus
-	// one metrics refresh so CPU/MEM are filled in.
+	// Feed the kinds their messages until all started have their first list,
+	// plus one metrics refresh so CPU/MEM are filled in.
 	var readyAt time.Time
 	for {
 		ready := true
 		for _, k := range h.kinds {
+			if !k.Available() || (info.Config != nil && info.Config.Hidden(k.Name())) {
+				continue
+			}
 			ready = ready && k.Ready()
 		}
 		if ready && readyAt.IsZero() {

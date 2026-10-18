@@ -17,6 +17,7 @@ type Host struct {
 	Refs    []resources.Ref // what the other sections list
 	NS      string
 	Filter  string
+	notes   []string
 }
 
 func (h *Host) Context() context.Context { return context.Background() }
@@ -25,9 +26,21 @@ func (h *Host) Selector() string         { return h.Filter }
 func (h *Host) Refresh() time.Duration   { return 5 * time.Second }
 func (h *Host) Send(tea.Msg)             {}
 func (h *Host) Log(c resources.Change)   { h.Changes = append(h.Changes, c) }
-func (h *Host) Notice(string)            {}
+func (h *Host) Notice(s string)          { h.notes = append(h.notes, s) }
 func (h *Host) Listed() []resources.Ref  { return h.Refs }
 func (h *Host) Pulse(time.Time)          {}
+
+// Notices returns all notices recorded so far, joined by "; ".
+func (h *Host) Notices() string {
+	var out string
+	for i, n := range h.notes {
+		if i > 0 {
+			out += "; "
+		}
+		out += n
+	}
+	return out
+}
 
 func (h *Host) Namespace() string {
 	if h.NS == "" {
