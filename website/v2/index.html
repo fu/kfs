@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>kfs — one namespace, everything in it, live</title>
+  <meta name="description" content="kfs shows one Kubernetes namespace on one page, live: GitOps apps, deployments, pods, services, secrets and a change log of everything that happens there.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-grid.min.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+  <!-- The rail, as in kfs: grey packets flowing down the left edge, a cyan change now and then. -->
+  <div id="rail" aria-hidden="true"></div>
+
+  <main class="container-xxl">
+    <header class="masthead">
+      <!-- LOGO: replace the placeholder below with the kfs ASCII art (keep the <pre>). -->
+      <pre id="logo" class="logo" aria-label="kfs">
++-------------------------+
+|   k f s   .   logo      |
+|   ascii art goes here   |
++-------------------------+</pre>
+      <h1>One namespace,<br><em>everything in it,</em> live.</h1>
+      <p class="lede">More than <code>kubectl</code>, less than <code>k9s</code> &mdash; and all of it linked up.</p>
+    </header>
+
+    <div class="row gx-4 gx-lg-5 gy-5">
+      <div class="col-lg-6">
+
+        <section>
+          <h2><span class="no">01</span> What it is</h2>
+          <p>
+            kfs shows a Kubernetes namespace on one page that updates in place: the
+            GitOps apps that deploy it, its deployments, replicasets and pods with CPU
+            and memory, its services, ingress routes, configmaps and secrets. Below
+            them runs a change log of everything that happens there &mdash; including
+            what happened before you started.
+          </p>
+          <p>
+            Select a row and everything linked to it lights up, across sections: the
+            app that deploys it, the pods it runs, the secrets and configmaps they
+            read, the services and ingress routes in front of them.
+          </p>
+        </section>
+
+        <section>
+          <h2><span class="no">02</span> What you get</h2>
+          <dl class="features">
+            <div><dt>One page, live</dt><dd>Pick a namespace, optionally a label filter. No sub commands, no screens to remember.</dd></div>
+            <div><dt>The why, not just the state</dt><dd>When an Argo CD or Flux app is not green, kfs looks at what it manages and says which workload is failing and why.</dd></div>
+            <div><dt>A memory</dt><dd>The change log starts with the events Kubernetes still keeps, so you see what happened before you looked.</dd></div>
+            <div><dt>Hands on</dt><dd>Logs, shell, port-forward, describe and yaml on the selected row.</dd></div>
+            <div><dt>Careful with secrets</dt><dd>Values are never kept in the list and only shown when you ask.</dd></div>
+            <div><dt>kubectl at heart</dt><dd>Same libraries, same flags: <code>-n</code>, <code>--context</code>, <code>--kubeconfig</code>, exec auth plugins.</dd></div>
+          </dl>
+        </section>
+
+        <section id="install">
+          <h2><span class="no">03</span> Install</h2>
+
+          <ol class="steps">
+            <li>
+              <h3>With Homebrew <span>macOS, Linux</span></h3>
+              <div class="cmd"><code>brew install fu/tap/kfs</code><button class="copy" type="button">copy</button></div>
+            </li>
+            <li>
+              <h3>Or with Go</h3>
+              <div class="cmd"><code>go install github.com/fu/kfs@latest</code><button class="copy" type="button">copy</button></div>
+            </li>
+            <li>
+              <h3>Or a binary</h3>
+              <p>Builds for macOS, Linux and Windows are on the
+                <a href="https://github.com/fu/kfs/releases">releases page</a>.
+                Unpack one and put <code>kfs</code> on your <code>PATH</code>.</p>
+            </li>
+            <li>
+              <h3>Run it</h3>
+              <p>kfs reads your kubeconfig exactly like kubectl does. There is nothing to set up.</p>
+              <div class="cmd"><code>kfs -n shop</code><button class="copy" type="button">copy</button></div>
+            </li>
+          </ol>
+
+          <p class="note">Coming from k7s? Run <code>brew uninstall k7s</code>, then install kfs as
+            above. The config now lives in <code>~/.config/kfs/</code>.</p>
+        </section>
+
+        <section>
+          <h2><span class="no">04</span> Usage</h2>
+<pre class="term"><span class="dim">$</span> kfs                       <span class="dim"># the current namespace</span>
+<span class="dim">$</span> kfs -n shop               <span class="dim"># namespace shop</span>
+<span class="dim">$</span> kfs -n shop -l app=web    <span class="dim"># only one app in it</span>
+<span class="dim">$</span> kfs -n shop --once        <span class="dim"># print the sections once and exit</span></pre>
+        </section>
+
+        <section>
+          <h2><span class="no">05</span> Keys</h2>
+<pre class="term keys">[c] [n] [f]        context, namespace, filter
+[tab]              next section
+[up] [down]        move  (or the mouse wheel)
+[shift]+section    sort by the next column
+[d]                describe the row
+[l] [h] [w]        logs, shell, port-forward
+[q] [a]            scroll the change log
+[Q] [A]            move the divider
+[esc]              back, quit</pre>
+        </section>
+
+      </div>
+
+      <div class="col-lg-6">
+        <div class="screen-wrap">
+          <figure class="screen">
+            <figcaption><span>kfs -n shop</span><span class="dim">live</span></figcaption>
+            <!-- VIDEO: the recording is shared with the first version: ../media/kfs.mp4 (and ../media/kfs-poster.png). -->
+            <video id="demo" src="../media/kfs.mp4" poster="../media/kfs-poster.png" autoplay muted loop playsinline></video>
+            <div class="placeholder" id="demo-placeholder">
+<pre>
+ kfs | ctx dev | ns shop | filter app=web
+|gitops
+>1  o  o  web     shop  o main-app
+:
+|deployments
+o1  web   3/3   3   3  o  web:1.4.2
+.
+|pods
+o1  web-7d4b9c6f5-x2k8q  1/1  o  3m
+o2  web-7d4b9c6f5-pq9vz  1/1  o  3m
+:
++ changes (42) ===   --   .   == ---</pre>
+              <p>The recording goes here<span class="cursor">_</span></p>
+            </div>
+          </figure>
+          <p class="caption">Select a row: what it touches lights up. The rail on the left is time &mdash; changes travel down it.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <span>kfs &middot; Apache License 2.0</span>
+      <a href="https://github.com/fu/kfs">github.com/fu/kfs</a>
+    </footer>
+  </main>
+
+  <script src="site.js"></script>
+</body>
+</html>
