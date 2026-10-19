@@ -80,11 +80,36 @@ h1 {
 h1 em { font-style: normal; color: var(--cyan-hi); }
 
 .lede {
-  font-size: 20px;
+  font-size: 22px;
+  line-height: 1.45;
   color: var(--body);
-  margin: 0;
+  margin: 0 0 36px;
   max-width: 34em;
 }
+.lede code { font-size: 0.92em; color: var(--cyan-hi); }
+
+/* the one-line install under the headline: a small terminal window */
+.quick {
+  max-width: 36em;
+  border: 1px solid #3a3833;
+  background: #0b0b0a;
+}
+.quick-bar {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+  padding: 6px 14px;
+  border-bottom: 1px solid #3a3833;
+}
+.quick-bar span:first-child { color: var(--body); }
+.quick-bar span:first-child::before { content: "* "; color: var(--cyan-hi); }
+.quick .cmd { border: 0; max-width: none; padding: 14px 12px 14px 16px; }
+.quick .cmd code { font-size: 16px; }
+.quick .cmd code::before { color: var(--cyan-hi); }
+.quick-alt { font-size: 14px; color: var(--dim); margin: 12px 0 0; }
+.quick-alt code { color: var(--body); }
 
 /* ---- sections ------------------------------------------------------------- */
 
@@ -182,6 +207,7 @@ p { margin: 0 0 16px; max-width: 36em; }
 .copy.done { color: var(--bg); background: var(--cyan); border-color: var(--cyan); }
 
 .note { color: var(--dim); font-size: 15px; }
+.steps .sub { color: var(--dim); font-size: 14px; margin: 10px 0 0; }
 
 /* ---- terminal blocks: usage, keys ----------------------------------------- */
 

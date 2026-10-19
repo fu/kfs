@@ -14,9 +14,16 @@ behave exactly like in kubectl. TUI: Bubble Tea + Lip Gloss.
 ## Install
 
 ```bash
-brew install fu/tap/kfs                  # macOS / Linux
-go install github.com/fu/kfs@latest      # or with Go
+curl -fsSL https://getkfs.org/install.sh | sh    # macOS / Linux
+brew install fu/tap/kfs                          # or with Homebrew
+go install github.com/fu/kfs@latest              # or with Go
 ```
+
+The install script ([`website/install.sh`](website/install.sh)) picks the
+build for your OS and CPU, checks it against the release's `checksums.txt`
+and puts `kfs` into `/usr/local/bin` if that is writable, else
+`~/.local/bin`. `KFS_VERSION=v0.5.2` installs another release,
+`KFS_INSTALL_DIR=…` another place.
 
 Or download a binary from the [releases](https://github.com/fu/kfs/releases).
 

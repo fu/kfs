@@ -27,7 +27,13 @@ _/     .      \/     /   \      \
          \_______/ /
            \______/</pre>
       <h1>One namespace,<br><em>everything in it,</em> live.</h1>
-      <p class="lede">Like <code>kubectl get -w</code> on steroids &mdash; for a whole namespace, and all of it linked up.</p>
+      <p class="lede"><code>kubectl get -w</code> on steroids:<br>a whole namespace, live, and all of it linked up.</p>
+
+      <div class="quick">
+        <div class="quick-bar"><span>install</span><span>macOS &middot; Linux</span></div>
+        <div class="cmd"><code>curl -fsSL https://getkfs.org/install.sh | sh</code><button class="copy" type="button">copy</button></div>
+      </div>
+      <p class="quick-alt">or <code>brew install fu/tap/kfs</code> &middot; <a href="#install">other ways</a></p>
     </header>
 
     <div class="row gx-4 gx-lg-5 gy-5">
@@ -66,7 +72,14 @@ _/     .      \/     /   \      \
 
           <ol class="steps">
             <li>
-              <h3>With Homebrew <span>macOS, Linux</span></h3>
+              <h3>One line <span>macOS, Linux</span></h3>
+              <div class="cmd"><code>curl -fsSL https://getkfs.org/install.sh | sh</code><button class="copy" type="button">copy</button></div>
+              <p class="sub">Picks the build for your machine, checks it against the release checksums
+                and puts <code>kfs</code> in <code>/usr/local/bin</code> (or <code>~/.local/bin</code>).
+                <a href="../install.sh">Read the script</a> first if you like.</p>
+            </li>
+            <li>
+              <h3>Or with Homebrew</h3>
               <div class="cmd"><code>brew install fu/tap/kfs</code><button class="copy" type="button">copy</button></div>
             </li>
             <li>
