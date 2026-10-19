@@ -130,29 +130,18 @@ secrets. Select a secret to see who uses it, up to the app. Secrets are
 used through volumes, `env`/`envFrom` and image pull secrets; jobs belong
 to their CronJob / KEDA ScaledJob by name.
 
-The links also draw a **rail**: a light-cyan line runs down the left edge of
-the panes, straight from the k7s badge, and its flow continues into the change
-log — the separator opens with a corner (`╰`) and packets keep travelling left to
-right. The rail is a discrete flow on its own steady beat: it starts out empty,
-and every `railStep` a fresh packet is born at the top while every glyph already
-on the rail walks one row further down, the bottom one falling off. A packet
-opens with a faint dot (`.`), grows downward into solid or dotted bars (`│ ┆ ⋮`),
-and closes with a dot or a space — after which nothing can rise again until the
-gap clears and a new packet begins. Because a packet is only ever born at the top
-and travels down, the motion always reads downward, and the whole rail glows as
-it breathes. The rail also **remembers trouble**: when a `WARNING` lands in the
-change log, every packet seeded for a while afterwards is tainted faint red, so
-over time the rail still shows where things went wrong; a tainted cell is never a
-bare gap, so the red reads as one continuous trail. Its speed and the odds a
-packet opens, grows, closes, or rests are plain constants at the top of
-`rail.go` (`railStep`, `railOpen`, `railGrow`, `railDot`, `railTaintHold`, and
-the horizontal density `railLineGap`) to fine-tune the animation by hand. It
-marks linked rows with a glowing circle (`●`) and the selected row with a glowing
-arrow (`▶`) — those two markers are the only solid glyphs on the rail, so the
-flowing trail never looks like a link. The panes sit one column to its right. It
-is decoration
-over the same facts the teal highlight shows — where the rail marks is where
-the selection reaches.
+The **rail** is a time line of the change log. It starts under the k7s
+badge, runs down the left edge of the sections (which sit one column to its
+right), turns at the divider (`╰`) and runs along it to the right edge:
+top-left is now, the far right end is `rail.minutes` ago (config, default
+10). Every frame the rail is cut into as many slots as the window has room
+for, each slot covering an equal share of that time — so what happened walks
+one slot further every minutes/slots, and a bigger window shows the same time
+finer: an alert that fills one slot on a small screen may fill two on a large
+one. A slot is a dim dotted line (`┆ ┄`) while nothing happened in its time,
+grey (`│ ─`) when something changed, bright (`┃ ━`) when a lot did, and red
+when a warning or a failing state came in. It counts what the change log
+shows, so the filter applies to it too.
 
 The status line has one **gitops light**: the worst of the responsible apps
 and their parents, so green pods under a broken deployment chain do not
@@ -180,7 +169,9 @@ It records:
   is stuck; new replicaset revisions and their scaling
 - pod adds/deletes and status, ready and restart changes; container exits are
   explained (`exit OOMKilled(137) — out of memory, hit its memory limit`)
-- secrets added, deleted and updated
+- secrets and configmaps added, deleted and updated
+- services added and deleted, type, address and port changes; IngressRoutes
+  added and deleted, host, entry point, route and service changes
 - sync / health / revision changes of the responsible apps, and why an
   app is not green, one line each: the resources Argo CD / Flux list, plus
   what k7s finds itself in what the app manages (Argo CD 3 no longer keeps
@@ -294,6 +285,14 @@ status:
   secrets: [count]
 ```
 
+`rail.minutes` is how much time the rail spans, from now
+(top-left) to its far right end:
+
+```yaml
+rail:
+  minutes: 10
+```
+
 A command a section does not list is not offered (`pods: {}` offers none).
 A section missing from `commands` gets its defaults. Page keys (`c n f`, the
 section keys, `q a Q A`, `j k G`, digits, `esc`) win over commands.
@@ -334,6 +333,7 @@ internal/tui/              everything drawn, the same way for every kind
   picker.go  viewer.go     the generic screens of Picker / Viewer steps
   terminal.go              Exec steps: terminal hand-over (+ size queue)
   changes.go               the change log and Kubernetes events
+  rail.go                  the rail: the change log as a time line along the page edge
   contexts.go namespaces.go filter.go   the scope menus (pickers)
   once.go                  --once: the same rows, printed
 ```

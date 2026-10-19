@@ -28,13 +28,11 @@ type page struct {
 	jumpAt   time.Time
 	grow     int                  // lines the change log got (Q) or gave (A) over its default height
 	sorts    map[string]sortState // per section: the column Shift+key sorted it to
-	rail     railFlow             // the flowing link rail down the left edge
 }
 
 func (p *page) reset() {
 	p.selected, p.moved, p.offset, p.jumpBuf = "", false, 0, ""
 	p.sorts = nil
-	p.rail.reset()
 }
 
 func (p *page) shown(k resources.Resource) bool { return p.cfg == nil || !p.cfg.Hidden(k.Name()) }
@@ -363,10 +361,6 @@ func (m *model) sectionStatus(k resources.Resource) string {
 
 func (m *model) pageView() string {
 	l := m.layout()
-	var b strings.Builder
-	b.WriteString(m.statusLine())
-	b.WriteString("\n\n")
-
 	entries := m.entries()
 	if (!m.page.moved || !slices.Contains(entries, m.page.selected)) && len(entries) > 0 {
 		m.page.selected = entries[0]
@@ -387,29 +381,22 @@ func (m *model) pageView() string {
 	links := linked(selRef, m.pageLinks())
 
 	// Every shown section's lines, remembering where the selected row is. The
-	// panes are drawn one column narrower to leave room for the link rail, and
-	// each line carries a rail role (spine / linked / selected) alongside it.
-	pw := m.width - railWidth // pane width, inside the rail
+	// sections are drawn one column narrower: the rail runs left of them.
+	pw := m.width - railWidth
 	var lines []string
-	var role []int
 	selLine := 0
-	// add appends a pane line and its rail role together.
-	add := func(r int, s string) {
-		role = append(role, r)
-		lines = append(lines, s)
-	}
 	for _, k := range m.sections() {
 		rows := m.rows(k)
 		if len(lines) > 0 {
-			add(railRoleRun, "")
+			lines = append(lines, "")
 		}
-		add(railRoleRun, header.Render(k.Name()))
+		lines = append(lines, header.Render(k.Name()))
 		if len(rows) == 0 {
 			empty := k.Empty()
 			if n := m.hiddenRows(k); n > 0 {
 				empty = fmt.Sprintf("all %d hidden by state (f to change)", n)
 			}
-			add(railRoleRun, dim.Render("  "+empty))
+			lines = append(lines, dim.Render("  "+empty))
 			continue
 		}
 		sel := ""
@@ -420,39 +407,38 @@ func (m *model) pageView() string {
 			}
 		}
 		hdr, body := table{cols: m.sortCols(k), rows: rows, number: true, linked: links}.lines(sel, pw)
-		add(railRoleRun, hdr)
-		for i, r := range rows {
-			switch {
-			case k.Name() == selName && r.Key == selKey:
-				add(railRoleSel, body[i])
-			case links[r.Ref]:
-				add(railRoleLink, body[i])
-			default:
-				add(railRoleRun, body[i])
-			}
-		}
+		lines = append(lines, hdr)
+		lines = append(lines, body...)
 	}
 	if len(lines) == 0 {
 		var letters []string
 		for _, k := range m.kinds {
 			letters = append(letters, toggleKey(k))
 		}
-		add(railRoleRun, dim.Render("  all sections hidden: press "+strings.Join(letters, ", ")+" to show them"))
+		lines = append(lines, dim.Render("  all sections hidden: press "+strings.Join(letters, ", ")+" to show them"))
 	}
-
 	m.page.offset = scrollOffset(selLine, m.page.offset, l.body, len(lines))
-	now := time.Now()
-	m.page.rail.advance(l.body, now, m.changes.lastWarn)
+
+	// The change log draws its divider; the rail is cut there, once the
+	// divider's title (and so how much of it the rail runs along) is known:
+	// one slot under the badge, one per section line, the corner, the run.
+	var rv railView
+	changes := m.changes.view(l.changes, m.width, func(title string) string {
+		rv = m.changes.rail.view(1+l.body, max(0, m.width-railWidth-lipgloss.Width(title)), time.Now())
+		return rv.corner + dim.Render(title) + rv.along
+	})
+
+	var b strings.Builder
+	b.WriteString(m.statusLine())
+	b.WriteString("\n" + rv.down[0] + "\n")
 	for i := 0; i < l.body; i++ {
-		idx := m.page.offset + i
-		b.WriteString(railDraw(roleAt(role, idx), m.page.rail.cell(i)))
-		if idx < len(lines) {
+		b.WriteString(rv.down[1+i])
+		if idx := m.page.offset + i; idx < len(lines) {
 			b.WriteString(lines[idx])
 		}
 		b.WriteByte('\n')
 	}
-
-	b.WriteString(m.changes.view(l.changes, m.width))
+	b.WriteString(changes)
 
 	var cmds []string
 	for _, a := range m.actions() {

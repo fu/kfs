@@ -81,7 +81,7 @@ func TestFilterShowsOnlyEventsAboutListedObjects(t *testing.T) {
 	} {
 		m.addEvent(eventMsg{e: e})
 	}
-	out := m.changes.view(10, 120)
+	out := m.changes.view(10, 120, nil)
 	if !strings.Contains(out, "changes (4)") || strings.Contains(out, "db") || !strings.Contains(out, "web-6c1-old") {
 		t.Errorf("want the 4 events about web:\n%s", out)
 	}
@@ -108,7 +108,7 @@ func TestTallEntryCanBeScrolledToItsFirstLine(t *testing.T) {
 	}
 	c.add(resources.Change{At: time.Now(), Kind: resources.State, Object: "shop", Detail: "auto-sync off", Items: items})
 	c.add(resources.Change{At: time.Now(), Kind: resources.State, Object: "main-app"})
-	out := c.view(10, 120)
+	out := c.view(10, 120, nil)
 	if c.back != 9 { // 19 lines in total, 10 visible
 		t.Fatalf("back clamped to %d, want 9", c.back)
 	}

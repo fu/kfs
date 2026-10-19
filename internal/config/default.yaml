@@ -5,7 +5,7 @@
 # comments do not survive there. Edit it while k7s is not running.
 
 # The file format. k7s migrates older files and never overwrites a newer one.
-version: 5
+version: 6
 
 # The order of the sections, top to bottom (and in the menu). Sections not
 # listed follow in this order.
@@ -40,6 +40,14 @@ hide:
 # fly when you press Q / A and restores it on the next start.
 layout:
   changes_pct: 33
+
+# The rail: a time line from the k7s badge down the left edge and along the
+# divider to the right, showing the last `minutes`. The newest moment is at the
+# top; everything walks towards the end as time passes. A slot is grey when
+# something changed then (brighter the more), red when an alert came in (a
+# warning event, or something turning red). It is re-cut to the window size.
+rail:
+  minutes: 10
 
 # What each section on the page shows in the status line, after its name;
 # "*" adds to every section ("pods: []" leaves pods only the "*" items).

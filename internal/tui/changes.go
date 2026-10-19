@@ -6,7 +6,6 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/lipgloss"
 
@@ -21,22 +20,21 @@ import (
 const maxChanges = 1000
 
 type changeLog struct {
-	entries  []resources.Change // oldest first
-	back     int                // lines scrolled up
-	gen      int                // of the event watch
-	lastWarn time.Time          // when a WARNING last landed (taints the rail red)
-	cancel   context.CancelFunc
+	entries []resources.Change // oldest first
+	back    int                // lines scrolled up
+	gen     int                // of the event watch
+	rail    rail               // the same changes on the time line
+	cancel  context.CancelFunc
 }
 
-func (c *changeLog) reset() { c.entries, c.back, c.lastWarn = nil, 0, time.Time{} }
+func (c *changeLog) reset() { c.entries, c.back = nil, 0; c.rail.reset() }
 
 // add keeps entries in time order: events from before the watch started
-// carry their own, older timestamps.
+// carry their own, older timestamps. Every entry also lands on the rail, red
+// when it is an alert.
 func (c *changeLog) add(e resources.Change) {
 	c.entries = append(c.entries, e)
-	if e.Kind == resources.Warning {
-		c.lastWarn = time.Now()
-	}
+	c.rail.mark(e.At, alert(e), e.Show)
 	if n := len(c.entries); n > 1 && c.entries[n-2].At.After(e.At) {
 		sort.SliceStable(c.entries, func(i, j int) bool { return c.entries[i].At.Before(c.entries[j].At) })
 	}
@@ -45,9 +43,24 @@ func (c *changeLog) add(e resources.Change) {
 	}
 }
 
+// alert reports whether a change is an alert: a warning event, or something
+// turning red (its state shown in a red tone).
+func alert(e resources.Change) bool {
+	if e.Kind == resources.Warning {
+		return true
+	}
+	for _, s := range e.State {
+		if s.Tone == resources.Alarm || s.Tone == resources.Bad {
+			return true
+		}
+	}
+	return false
+}
+
 // view renders the newest entries that belong on the page in n lines; back
-// scrolls up. Entries can span several lines (wrapping, extra items).
-func (c *changeLog) view(n, width int) string {
+// scrolls up. Entries can span several lines (wrapping, extra items). The
+// first line is the divider: divider(title) draws it around the title.
+func (c *changeLog) view(n, width int, divider func(title string) string) string {
 	var shown []resources.Change
 	for _, e := range c.entries {
 		if e.Show == nil || e.Show() {
@@ -62,17 +75,16 @@ func (c *changeLog) view(n, width int) string {
 	c.back = max(0, min(c.back, len(all)-n))
 
 	var b strings.Builder
-	// The separator doubles as the rail's foot: a bright corner at the left
-	// edge where the vertical rail turns, then the same flowing wave running
-	// left to right across the rest of the line.
-	head := fmt.Sprintf(" changes (%d) ", len(shown))
+	title := fmt.Sprintf(" changes (%d) ", len(shown))
 	if c.back > 0 {
-		head += fmt.Sprintf("▲ scrolled up %d lines (a to go down) ", c.back)
+		title += fmt.Sprintf("▲ scrolled up %d lines (a to go down) ", c.back)
 	}
-	b.WriteString(railFoot(c.lastWarn) + dim.Render(head))
-	if rest := width - 1 - lipgloss.Width(head); rest > 0 {
-		b.WriteString(railFlowLine(rest, railBeat(), c.lastWarn))
+	if divider == nil {
+		divider = func(t string) string {
+			return dim.Render("─" + t + strings.Repeat("─", max(0, width-1-lipgloss.Width(t))))
+		}
 	}
+	b.WriteString(divider(title))
 	b.WriteByte('\n')
 
 	end := len(all) - c.back

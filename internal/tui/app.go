@@ -130,6 +130,7 @@ func Run(ctx context.Context, flags *genericclioptions.ConfigFlags, client *kube
 
 	m := &model{ctx: ctx, flags: flags, client: client, info: info, kinds: ordered(info.Config, registry()), started: map[string]bool{}}
 	m.page.cfg = info.Config
+	m.changes.rail.window = info.Config.RailWindow()
 	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithContext(ctx))
 	m.send = p.Send
 	if info.Notice != "" {

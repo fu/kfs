@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -26,7 +27,8 @@ import (
 //	3  + commands, resource_order
 //	4  + status
 //	5  + layout
-const Version = 5
+//	6  + rail
+const Version = 6
 
 //go:embed default.yaml
 var defaultYAML []byte
@@ -47,6 +49,8 @@ type Config struct {
 	Status map[string][]string `yaml:"status"`
 	// Layout remembers where the divider sits between sections and change log.
 	Layout Layout `yaml:"layout"`
+	// Rail sets the time line along the left edge and the divider.
+	Rail Rail `yaml:"rail"`
 	// Namespaces is the last namespace per context, used when -n is not given.
 	Namespaces map[string]string `yaml:"namespaces,omitempty"`
 	Colors     Colors            `yaml:"colors"`
@@ -63,6 +67,20 @@ type Sections struct {
 // sits, as the change log's share of the space (5–95, percent).
 type Layout struct {
 	ChangesPct int `yaml:"changes_pct"`
+}
+
+// Rail is the time line from the k7s badge down the left edge and along the
+// divider: it shows the last Minutes, newest at the top.
+type Rail struct {
+	Minutes int `yaml:"minutes"`
+}
+
+// RailWindow is how much time the rail shows (10 minutes if not set).
+func (c *Config) RailWindow() time.Duration {
+	if c == nil || c.Rail.Minutes <= 0 {
+		return 10 * time.Minute
+	}
+	return time.Duration(c.Rail.Minutes) * time.Minute
 }
 
 // Colors are "#rrggbb" or ANSI numbers ("0"–"255").
@@ -167,6 +185,9 @@ func (c *Config) fill(d *Config) {
 	}
 	if c.Layout.ChangesPct == 0 {
 		c.Layout.ChangesPct = d.Layout.ChangesPct
+	}
+	if c.Rail.Minutes == 0 {
+		c.Rail.Minutes = d.Rail.Minutes
 	}
 	for _, f := range []struct {
 		v *string
