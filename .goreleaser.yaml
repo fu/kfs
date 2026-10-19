@@ -46,7 +46,7 @@ homebrew_casks:
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     skip_upload: '{{ if index .Env "HOMEBREW_TAP_GITHUB_TOKEN" }}false{{ else }}true{{ end }}'
     homepage: https://github.com/fu/kfs
-    description: "Live kubectl views: more than kubectl, less than k9s"
+    description: "One namespace, everything in it, live: kubectl get -w on steroids"
     commit_author:
       name: Christian Fufezan
       email: christian@fufezan.net

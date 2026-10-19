@@ -62,8 +62,8 @@ code { color: var(--cyan-hi); font-size: 1em; }
 
 .logo {
   color: var(--cyan);
-  font-size: 22px;
-  line-height: 1;
+  font-size: 26px;
+  line-height: 1.05;
   margin: 0 0 24px;
   overflow-x: auto;
 }
@@ -268,6 +268,7 @@ footer {
 
 @media (max-width: 575px) {
   body { font-size: 21px; }
+  .logo { font-size: 19px; }
   .log li { flex-wrap: wrap; gap: 0 12px; padding: 4px 0; }
   .log .d { flex-basis: 100%; }
   .steps > li { padding-left: 48px; }
