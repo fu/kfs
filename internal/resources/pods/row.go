@@ -93,7 +93,7 @@ func rowCells(name, readyStr string, status resources.Tone, restartStr string,
 		"READY":    {Text: readyStr},
 		"STATUS":   {Text: "●", Tone: status},
 		"RESTARTS": restarts,
-		"AGE":      {Text: age},
+		"AGE":      {Text: age, Tone: resources.Dim},
 	}
 	if hasUsage {
 		cells["CPU"] = resources.Cell{Text: kube.CPU(usage.CPU) + arrow(cpuTrend), Tone: trendTone(cpuTrend)}

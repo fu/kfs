@@ -65,17 +65,43 @@ type appRow struct {
 
 func (r *Resource) Name() string { return "gitops" }
 
-// Tag: ap (Argo CD Application); Flux changes say ks or hr themselves.
-func (r *Resource) Tag() string       { return "ap" }
-func (r *Resource) Objects() []string { return []string{"Application", "Kustomization", "HelmRelease"} }
+// Tag: ap (Argo CD Application); Flux kinds each have their own tag in tag().
+func (r *Resource) Tag() string { return "ap" }
+func (r *Resource) Objects() []string {
+	return []string{
+		"Application", "Kustomization", "HelmRelease",
+		"GitRepository", "OCIRepository", "HelmRepository", "Bucket",
+		"ImageRepository", "ImagePolicy", "ImageUpdateAutomation",
+		"Alert", "Provider", "Receiver",
+	}
+}
 
-// tag is an app's tag: kubectl's short names for the Flux kinds.
+// tag is an app's tag in the change log. HelmRelease and HelmRepository
+// share "hr" since the KIND column already tells them apart.
 func tag(a App) string {
 	switch a.Kind {
 	case "Kustomization":
 		return "ks"
-	case "HelmRelease":
+	case "HelmRelease", "HelmRepository":
 		return "hr"
+	case "GitRepository":
+		return "gr"
+	case "OCIRepository":
+		return "oc"
+	case "Bucket":
+		return "bk"
+	case "ImageRepository":
+		return "ir"
+	case "ImagePolicy":
+		return "ip"
+	case "ImageUpdateAutomation":
+		return "au"
+	case "Alert":
+		return "al"
+	case "Provider":
+		return "pv"
+	case "Receiver":
+		return "rc"
 	}
 	return "ap"
 }
@@ -187,14 +213,39 @@ func (r *Resource) findResponsible() []string {
 	for _, ref := range r.host.Listed() {
 		listed[Ref(ref)] = true
 	}
-	var keys []string
+	keys := map[string]bool{}
 	for k, row := range r.rows {
 		if isResponsible(row.app, listed, ns, all) {
-			keys = append(keys, k)
+			keys[k] = true
 		}
 	}
-	sort.Strings(keys)
-	return keys
+	// App-of-apps: an app that deploys another app brings it in. The
+	// child's destination is usually elsewhere, so the namespace check
+	// alone would hide it.
+	for changed := true; changed; {
+		changed = false
+		byRef := map[Ref]string{}
+		for k, row := range r.rows {
+			if row.deletedAt.IsZero() {
+				a := row.app
+				byRef[Ref{Kind: a.Kind, Namespace: a.Namespace, Name: a.Name}] = k
+			}
+		}
+		for k := range keys {
+			for _, m := range r.rows[k].app.Manages {
+				if child, ok := byRef[m]; ok && !keys[child] {
+					keys[child] = true
+					changed = true
+				}
+			}
+		}
+	}
+	out := make([]string, 0, len(keys))
+	for k := range keys {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func isResponsible(a App, listed map[Ref]bool, ns string, all bool) bool {

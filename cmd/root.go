@@ -39,14 +39,15 @@ func newRootCmd() *cobra.Command {
 		Use:   "k7s [-n namespace] [-l selector]",
 		Short: "k7s - one namespace, everything in it, live",
 		Long: `k7s shows one namespace on one page, updating in place: the gitops apps
-that deploy it, its deployments, replicasets, pods (with CPU/MEM) and
-secrets, and a change log of everything that happens there — including the
-events from before you started.
+that deploy it, its deployments, replicasets, pods (with CPU/MEM), services,
+ingress routes, configmaps and secrets, and a change log of everything that
+happens there — including the events from before you started.
 
 Pick the namespace with -n (default: the one you last used in this context,
 else the context's) and narrow it to one app with -l. Inside k7s, c / n / f
-switch context, namespace and filter; g / d / r / p / s show or hide the
-sections. Colors, hidden sections and the last namespaces are kept in
+switch context, namespace and filter; the first letter of a section (or the
+letter its name spells, e.g. i for services) shows or hides it. Colors,
+hidden sections and the last namespaces are kept in
 ~/.config/k7s/config.yaml.
 
 Examples:

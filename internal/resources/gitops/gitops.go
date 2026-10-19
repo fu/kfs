@@ -201,6 +201,26 @@ func Watch(ctx context.Context, c *kube.Client, engine Engine, h Handlers) error
 		if v := firstServed(c, "helm.toolkit.fluxcd.io", "helmreleases", "v2", "v2beta2", "v2beta1"); v != "" {
 			mappers = append(mappers, mapper{schema.GroupVersionResource{Group: "helm.toolkit.fluxcd.io", Version: v, Resource: "helmreleases"}, fromHelmRelease})
 		}
+		add := func(group, resource, to string, fn func(*unstructured.Unstructured) App) {
+			if v := firstServed(c, group, resource, strings.Split(to, ",")...); v != "" {
+				mappers = append(mappers, mapper{schema.GroupVersionResource{Group: group, Version: v, Resource: resource}, fn})
+			}
+		}
+		const (
+			srcGroup = "source.toolkit.fluxcd.io"
+			imgGroup = "image.toolkit.fluxcd.io"
+			notGroup = "notification.toolkit.fluxcd.io"
+		)
+		add(srcGroup, "gitrepositories", "v1,v1beta2,v1beta1", fromGitRepository)
+		add(srcGroup, "ocirepositories", "v1beta2,v1beta1", fromOCIRepository)
+		add(srcGroup, "helmrepositories", "v1,v1beta2,v1beta1", fromHelmRepository)
+		add(srcGroup, "buckets", "v1,v1beta2,v1beta1", fromBucket)
+		add(imgGroup, "imagerepositories", "v1beta2,v1beta1,v1alpha1", fromImageRepository)
+		add(imgGroup, "imagepolicies", "v1beta2,v1beta1,v1alpha1", fromImagePolicy)
+		add(imgGroup, "imageupdateautomations", "v1beta2,v1beta1,v1alpha1", fromImageUpdateAutomation)
+		add(notGroup, "alerts", "v1beta3,v1beta2,v1beta1", fromAlert)
+		add(notGroup, "providers", "v1beta3,v1beta2,v1beta1", fromProvider)
+		add(notGroup, "receivers", "v1beta3,v1beta2,v1beta1", fromReceiver)
 	}
 
 	factory := dynamicinformer.NewDynamicSharedInformerFactory(c.Dynamic, 0)

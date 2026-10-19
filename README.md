@@ -38,33 +38,45 @@ and everything in it is shown.
 ```
  k7s │ ctx dev │ ns shop │ filter app=web │ gitops ● 1 apps │ deployments 1 ●1 ●0 ●0 │ pods 3 ●3 ●0 ●0 │ secrets 2 │ ● watching
 
-gitops
- #  SYNC  HEALTH  NAME  DEST  PARENT      SOURCE              REV      SYNCED
- 1  ●     ●       web   shop  ● main-app  deploy/apps/web     f91dfdc  2h
+┆gitops
+│#  SYNC  HEALTH  NAME  DEST  PARENT      SOURCE              REV      SYNCED
+▶1  ●     ●       web   shop  ● main-app  deploy/apps/web     f91dfdc  2h
+⋮
+│deployments
+┆#  NAME  READY  UP-TO-DATE  AVAILABLE  STATUS  IMAGES    AGE
+●1  web   3/3             3          3  ●       web:1.4.2  40d
+.
+ replicasets
+┆#  NAME             REV  DESIRED  CURRENT  READY  STATUS  AGE
+●1  web-7d4b9c6f5      4        3        3      3  ●       3h
+│2  web-5f6c8d9b7      3        0        0      0  ●       2d
+⋮
+┆pods
+│#  NAME                   READY  STATUS  RESTARTS  CPU  %CPU/R  %CPU/L  MEM  %MEM/R  %MEM/L  AGE
+●1  web-7d4b9c6f5-x2k8q    1/1    ●       0         3m  1%      -       248Mi 48%    8%      3h
+┆…
+⋮
+│services
+┆#  NAME  TYPE        CLUSTER-IP   EXTERNAL-IP  PORTS    STATUS  AGE
+│1  web   LoadBalancer 10.96.3.11  1.2.3.4      80/TCP   ●       40d
+.
+┆ingressroutes
+⋮#  NAME  HOSTS            ENTRYPOINTS  ROUTES  STATUS  AGE
+┆1  web   app.example.com  websecure         2  ●       40d
+│
+ configmaps
+│#  NAME     DATA  AGE
+┆1  settings    4  40d
+⋮
+│secrets
+┆#  NAME     TYPE    KEYS  AGE
+⋮…
 
-deployments
- #  NAME  READY  UP-TO-DATE  AVAILABLE  STATUS  IMAGES    AGE
- 1  web   3/3             3          3  ●       web:1.4.2  40d
-
-replicasets
- #  NAME             REV  DESIRED  CURRENT  READY  STATUS  AGE
- 1  web-7d4b9c6f5      4        3        3      3  ●       3h
- 2  web-5f6c8d9b7      3        0        0      0  ●       2d
-
-pods
- #  NAME                   READY  STATUS  RESTARTS  CPU  %CPU/R  %CPU/L  MEM  %MEM/R  %MEM/L  AGE
- 1  web-7d4b9c6f5-x2k8q    1/1    ●       0         3m  1%      -       248Mi 48%    8%      3h
- …
-
-secrets
- #  NAME     TYPE    KEYS  AGE
- …
-
-─ changes (42) ─────────────────────────────────────────────────────────────
+╰ changes (42) ━━━    ┄┄   ·     ━━   ┈┈    ───    ┄    ···    ━━
 13:02:10 MODIFIED deployment/web  2/3  rollout web:1.4.1 → web:1.4.2, up-to-date 3 → 0
 13:02:11 EVENT    deployment/web  ScalingReplicaSet: Scaled up replica set web-7d4b9c6f5 to 3
 13:02:15 MODIFIED web-7d4b9c6f5-x2k8q  Running 1/1  status ContainerCreating → Running
- contexts  namespaces  filter │ gitops  deployments  replicasets  pods  secrets   logs  shell  forward  [q/a] changes  [esc] quit
+ contexts  namespaces  filter │ gitops  deployments  replicasets  pods  services  ingressroutes  configmaps  secrets   logs  shell  forward  [q/a] changes  [esc] quit
 ```
 
 **Sections** (in this order; each shows the same rows wherever it appears):
@@ -85,24 +97,62 @@ secrets
    pod's request (`/R`) and limit (`/L`, `-` = none). CPU/MEM show ↑/↓ versus
    the previous poll, changed cells flash, new pods are highlighted, deleted
    ones stay struck through for 8s, port-forwarded pods show `⇄:<port>`.
-5. **claims** — the PersistentVolumeClaims: a status light (green bound,
+5. **services** — type, cluster and external address, the port list and a
+   status light (amber while a LoadBalancer is still getting its address, red
+   for an ExternalName without a target). It links to the pods its selector
+   selects. Toggle with `i` (`s` is secrets).
+6. **ingressroutes** — Traefik IngressRoutes (only shown on clusters that have
+   the CRDs): the hosts each routes match, its entrypoints, how many routes it
+   holds and a light (amber while it holds no route). It links
+   to the services its routes send traffic to. Toggle with `u`.
+7. **configmaps** — name, number of entries, age. Like secrets, the values are
+   never kept in the list; describe and yaml fetch them on request. Toggle
+   with `o` (`c` is contexts).
+8. **claims** — the PersistentVolumeClaims: a status light (green bound,
    amber pending or resizing, red lost), the volume, capacity, access modes
    (RWO, RWX, …) and storage class. Toggle with `m` (`c` is contexts).
-6. **volumes** — the PersistentVolumes bound to claims of the namespace
+9. **volumes** — the PersistentVolumes bound to claims of the namespace
    (with a filter: to the listed claims): status (yellow released: the
    claim is gone, the data may remain), claim, capacity, reclaim policy.
-7. **secrets** — name, type, number of keys, age. Enter opens one: its keys
-   with the values masked; `r` reveals them. Values are only fetched for the
-   opened secret, never kept in the list.
+10. **secrets** — name, type, number of keys, age. Enter opens one: its keys
+    with the values masked; `r` reveals them. Values are only fetched for the
+    opened secret, never kept in the list.
 
 **Links**: the selected row lights up (dark teal) everything linked to it,
 across sections, following app → Deployment → ReplicaSet → pods → secrets
-and claims → volumes.
+and claims → volumes. A service reaches the pods its selector picks out; an
+IngressRoute reaches the services behind its routes — so a service lights up
+its pods (and their workloads and app), and an ingress route lights up its
+services and everything behind them.
 Select an app to see its deployments, their replicasets, pods and the
 secrets they use. Select a pod to see its replicaset, deployment, app and
 secrets. Select a secret to see who uses it, up to the app. Secrets are
 used through volumes, `env`/`envFrom` and image pull secrets; jobs belong
 to their CronJob / KEDA ScaledJob by name.
+
+The links also draw a **rail**: a light-cyan line runs down the left edge of
+the panes, straight from the k7s badge, and its flow continues into the change
+log — the separator opens with a corner (`╰`) and packets keep travelling left to
+right. The rail is a discrete flow on its own steady beat: it starts out empty,
+and every `railStep` a fresh packet is born at the top while every glyph already
+on the rail walks one row further down, the bottom one falling off. A packet
+opens with a faint dot (`.`), grows downward into solid or dotted bars (`│ ┆ ⋮`),
+and closes with a dot or a space — after which nothing can rise again until the
+gap clears and a new packet begins. Because a packet is only ever born at the top
+and travels down, the motion always reads downward, and the whole rail glows as
+it breathes. The rail also **remembers trouble**: when a `WARNING` lands in the
+change log, every packet seeded for a while afterwards is tainted faint red, so
+over time the rail still shows where things went wrong; a tainted cell is never a
+bare gap, so the red reads as one continuous trail. Its speed and the odds a
+packet opens, grows, closes, or rests are plain constants at the top of
+`rail.go` (`railStep`, `railOpen`, `railGrow`, `railDot`, `railTaintHold`, and
+the horizontal density `railLineGap`) to fine-tune the animation by hand. It
+marks linked rows with a glowing circle (`●`) and the selected row with a glowing
+arrow (`▶`) — those two markers are the only solid glyphs on the rail, so the
+flowing trail never looks like a link. The panes sit one column to its right. It
+is decoration
+over the same facts the teal highlight shows — where the rail marks is where
+the selection reaches.
 
 The status line has one **gitops light**: the worst of the responsible apps
 and their parents, so green pods under a broken deployment chain do not
@@ -111,8 +161,9 @@ look fine. The cyan "watching" dot breathes once per metrics refresh.
 **Change log** (`q`/`a` scroll it, line by line) — everything about what is
 shown, in time order. Each line starts with the time and a tag (up to three
 letters) for the kind it is about: kubectl's short name where it has a short
-one (`po` pods, `rs` replicasets, `pvc` claims, `pv` volumes, `ks`/`hr`
-Flux), else k7s' own (`dp` deployments, `se` secrets, `ap` Argo CD apps). Kubernetes events get the
+one (`po` pods, `rs` replicasets, `pvc` claims, `pv` volumes, `svc` services,
+`cm` configmaps, `ks`/`hr`
+Flux), else k7s' own (`dp` deployments, `se` secrets, `ir` ingress routes, `ap` Argo CD apps). Kubernetes events get the
 tag of the object they are about; events about other kinds (Jobs, …) are
 `ev`.
 
@@ -153,7 +204,8 @@ The navigation bar shows the menus with their key letter in cyan:
 | key | |
 |-----|---|
 | `c` / `n` / `f` | pick the **c**ontext / **n**amespace / **f**ilter; enter switches and returns |
-| `g` `e` `r` `p` `m` `v` `s` | show or hide the **g**itops / d**e**ployments / **r**eplicasets / **p**ods / clai**m**s / **v**olumes / **s**ecrets section |
+| `g` `e` `r` `p` `i` `u` `o` `m` `v` `s` | show or hide the **g**itops / d**e**ployments / **r**eplicasets / **p**ods / serv**i**ces / ingressro**u**tes / c**o**nfigmaps / clai**m**s / **v**olumes / **s**ecrets section |
+| `Shift` + section key | sort that section by its columns: a small arrow marks the column in order (it starts at NAME ↑); each press steps that column ↓, then the next column ↑, then ↓, cycling back to NAME ↑ |
 | `↑↓`, `0-9` | move; jump to row `#` of the current section |
 | `d` | on any row: **d**escribe it, the same text as `kubectl describe` (from kubectl's own describe code) |
 | `l` / `h` / `w` | on a pod: **l**ogs, s**h**ell, for**w**ard a port (again: stop) |
@@ -265,7 +317,7 @@ internal/resources/        the contract every kind implements
   command.go               Command (what a row can do) and its Target
   steps.go                 what a command leads to: Picker, Viewer, Exec
   commands/                commands for every kind: describe, yaml
-  gitops/ deployments/ replicasets/ pods/ pvcs/ pvs/ secrets/
+  gitops/ deployments/ replicasets/ pods/ services/ ingressroutes/ configmaps/ pvcs/ pvs/ secrets/
                            one folder per kind, each with
                              resource.go  watch, state, change log, links
                              row.go       its columns and cells
@@ -277,6 +329,7 @@ internal/tui/              everything drawn, the same way for every kind
   app.go                   the registry of kinds and their commands, screens, navigation bar
   page.go                  the page: sections, selection, # jump, commands bound by the config
   links.go                 the link view: what the selected row links to
+  sort.go                  per-section column sorting (Shift+section key)
   table.go                 row layout: widths, shrinking, truncation
   picker.go  viewer.go     the generic screens of Picker / Viewer steps
   terminal.go              Exec steps: terminal hand-over (+ size queue)

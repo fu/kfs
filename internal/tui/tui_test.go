@@ -21,14 +21,14 @@ type listing struct {
 	refs []resources.Ref
 }
 
-func (l listing) Listed() []resources.Ref       { return l.refs }
-func (l listing) Tag() string                   { return "po" }
-func (l listing) Objects() []string             { return []string{"Pod"} }
-func (l listing) Available() bool               { return true }
-func (l listing) Ready() bool                   { return true }
-func (l listing) Empty() string                 { return "" }
-func (l listing) Columns() []resources.Column   { return nil }
-func (l listing) Rows() []resources.Row         { return nil }
+func (l listing) Listed() []resources.Ref           { return l.refs }
+func (l listing) Tag() string                       { return "po" }
+func (l listing) Objects() []string                 { return []string{"Pod"} }
+func (l listing) Available() bool                   { return true }
+func (l listing) Ready() bool                       { return true }
+func (l listing) Empty() string                     { return "" }
+func (l listing) Columns() []resources.Column       { return nil }
+func (l listing) Rows() []resources.Row             { return nil }
 func (l listing) Indicators() []resources.Indicator { return nil }
 
 func TestChangesAreTaggedByKind(t *testing.T) {
@@ -180,7 +180,7 @@ func TestSectionsFollowResourceOrder(t *testing.T) {
 	for _, k := range ordered(cfg, registry()) {
 		names = append(names, k.Name())
 	}
-	if got := strings.Join(names, " "); got != "pods gitops deployments replicasets claims volumes secrets" {
+	if got := strings.Join(names, " "); got != "pods gitops deployments replicasets services ingressroutes configmaps claims volumes secrets" {
 		t.Errorf("pods and gitops on top: %q", got)
 	}
 }
@@ -264,19 +264,19 @@ func TestSectionToggles(t *testing.T) {
 // toggleResource is a minimal kind for toggle tests.
 type toggleResource struct{ name string }
 
-func (r toggleResource) Name() string                          { return r.name }
-func (r toggleResource) Tag() string                           { return r.name[:2] }
-func (r toggleResource) Objects() []string                     { return nil }
-func (r toggleResource) Available() bool                       { return true }
-func (r toggleResource) Ready() bool                           { return true }
-func (r toggleResource) Start(resources.Host) tea.Cmd          { return nil }
-func (r toggleResource) Stop()                                 {}
-func (r toggleResource) Update(tea.Msg) tea.Cmd                { return nil }
-func (r toggleResource) Columns() []resources.Column           { return nil }
-func (r toggleResource) Rows() []resources.Row                 { return nil }
-func (r toggleResource) Empty() string                         { return "" }
-func (r toggleResource) Indicators() []resources.Indicator     { return nil }
-func (r toggleResource) Listed() []resources.Ref               { return nil }
+func (r toggleResource) Name() string                      { return r.name }
+func (r toggleResource) Tag() string                       { return r.name[:2] }
+func (r toggleResource) Objects() []string                 { return nil }
+func (r toggleResource) Available() bool                   { return true }
+func (r toggleResource) Ready() bool                       { return true }
+func (r toggleResource) Start(resources.Host) tea.Cmd      { return nil }
+func (r toggleResource) Stop()                             {}
+func (r toggleResource) Update(tea.Msg) tea.Cmd            { return nil }
+func (r toggleResource) Columns() []resources.Column       { return nil }
+func (r toggleResource) Rows() []resources.Row             { return nil }
+func (r toggleResource) Empty() string                     { return "" }
+func (r toggleResource) Indicators() []resources.Indicator { return nil }
+func (r toggleResource) Listed() []resources.Ref           { return nil }
 
 func TestNarrowTableShrinksThenDrops(t *testing.T) {
 	tb := table{

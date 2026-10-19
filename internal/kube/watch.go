@@ -9,7 +9,8 @@ import (
 )
 
 // Handlers receive what a watch sees; they are called from background
-// goroutines and must not block for long.
+// goroutines and must not block for long. Each is optional — an unset one is
+// simply skipped (a side watch may only want objects, or just a warm cache).
 type Handlers[T any] struct {
 	Object func(obj T, deleted, initial bool)
 	Synced func() // the first list has arrived
@@ -24,6 +25,18 @@ func Watch[T any](ctx context.Context, c *Client, ns, selector string,
 	informer func(informers.SharedInformerFactory) cache.SharedIndexInformer, h Handlers[T]) error {
 	factory := informers.NewSharedInformerFactoryWithOptions(c.Kube, 0, informers.WithNamespace(ns),
 		informers.WithTweakListOptions(func(o *metav1.ListOptions) { o.LabelSelector = selector }))
+	// Handlers are optional: a side watch may only care about objects (or
+	// none at all, just to keep a cache warm), so fill the gaps rather than
+	// crash when one fires.
+	if h.Object == nil {
+		h.Object = func(T, bool, bool) {}
+	}
+	if h.Synced == nil {
+		h.Synced = func() {}
+	}
+	if h.Error == nil {
+		h.Error = func(error) {}
+	}
 	inf := informer(factory)
 	if err := inf.SetWatchErrorHandler(func(_ *cache.Reflector, err error) { h.Error(err) }); err != nil {
 		return err

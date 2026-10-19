@@ -26,10 +26,16 @@ type page struct {
 	offset   int            // first visible body line
 	jumpBuf  string
 	jumpAt   time.Time
-	grow     int // lines the change log got (Q) or gave (A) over its default height
+	grow     int                  // lines the change log got (Q) or gave (A) over its default height
+	sorts    map[string]sortState // per section: the column Shift+key sorted it to
+	rail     railFlow             // the flowing link rail down the left edge
 }
 
-func (p *page) reset() { p.selected, p.moved, p.offset, p.jumpBuf = "", false, 0, "" }
+func (p *page) reset() {
+	p.selected, p.moved, p.offset, p.jumpBuf = "", false, 0, ""
+	p.sorts = nil
+	p.rail.reset()
+}
 
 func (p *page) shown(k resources.Resource) bool { return p.cfg == nil || !p.cfg.Hidden(k.Name()) }
 
@@ -51,7 +57,8 @@ func (m *model) sections() []resources.Resource {
 	return out
 }
 
-// rows are a kind's rows without those in hidden states.
+// rows are a kind's rows without those in hidden states, in the page's sort
+// order for that section (natural order until Shift+key engages one).
 func (m *model) rows(k resources.Resource) []resources.Row {
 	all := k.Rows()
 	out := all[:0:0]
@@ -59,6 +66,11 @@ func (m *model) rows(k resources.Resource) []resources.Row {
 		if !m.page.cfg.StateHidden(k.Name(), r.State) {
 			out = append(out, r)
 		}
+	}
+	// Only re-order once the user has cycled a sort for this section; the
+	// natural (NAME-up) default is the order the kind already lists in.
+	if s, ok := m.page.sorts[k.Name()]; ok {
+		out = sortRows(out, s)
 	}
 	return out
 }
@@ -182,6 +194,16 @@ func (m *model) pageKey(msg tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	}
+	// Shift+<section key> (the key's capital) cycles that section's column sort.
+	if len(key) == 1 && 'A' <= key[0] && key[0] <= 'Z' {
+		lower := strings.ToLower(key)
+		for _, k := range m.kinds {
+			if m.page.shown(k) && k.Available() && toggleKey(k) == lower {
+				m.page.cycle(k.Name(), k.Columns())
+				return nil
+			}
+		}
+	}
 	for _, k := range m.kinds {
 		if key == toggleKey(k) {
 			m.page.toggle(k)
@@ -220,7 +242,7 @@ func (m *model) pageKey(msg tea.KeyMsg) tea.Cmd {
 		m.moveSelection(page)
 	case "home":
 		m.moveSelection(-1 << 30)
-	case "end", "G":
+	case "end":
 		m.moveSelection(1 << 30)
 	case "q":
 		m.changes.back++ // the pane clamps it
@@ -364,21 +386,30 @@ func (m *model) pageView() string {
 	}
 	links := linked(selRef, m.pageLinks())
 
-	// Every shown section's lines, remembering where the selected row is.
+	// Every shown section's lines, remembering where the selected row is. The
+	// panes are drawn one column narrower to leave room for the link rail, and
+	// each line carries a rail role (spine / linked / selected) alongside it.
+	pw := m.width - railWidth // pane width, inside the rail
 	var lines []string
+	var role []int
 	selLine := 0
+	// add appends a pane line and its rail role together.
+	add := func(r int, s string) {
+		role = append(role, r)
+		lines = append(lines, s)
+	}
 	for _, k := range m.sections() {
 		rows := m.rows(k)
 		if len(lines) > 0 {
-			lines = append(lines, "")
+			add(railRoleRun, "")
 		}
-		lines = append(lines, header.Render(k.Name()))
+		add(railRoleRun, header.Render(k.Name()))
 		if len(rows) == 0 {
 			empty := k.Empty()
 			if n := m.hiddenRows(k); n > 0 {
 				empty = fmt.Sprintf("all %d hidden by state (f to change)", n)
 			}
-			lines = append(lines, dim.Render("  "+empty))
+			add(railRoleRun, dim.Render("  "+empty))
 			continue
 		}
 		sel := ""
@@ -388,21 +419,34 @@ func (m *model) pageView() string {
 				selLine = len(lines) + 1 + i
 			}
 		}
-		hdr, body := table{cols: k.Columns(), rows: rows, number: true, linked: links}.lines(sel, m.width)
-		lines = append(lines, hdr)
-		lines = append(lines, body...)
+		hdr, body := table{cols: m.sortCols(k), rows: rows, number: true, linked: links}.lines(sel, pw)
+		add(railRoleRun, hdr)
+		for i, r := range rows {
+			switch {
+			case k.Name() == selName && r.Key == selKey:
+				add(railRoleSel, body[i])
+			case links[r.Ref]:
+				add(railRoleLink, body[i])
+			default:
+				add(railRoleRun, body[i])
+			}
+		}
 	}
 	if len(lines) == 0 {
 		var letters []string
 		for _, k := range m.kinds {
 			letters = append(letters, toggleKey(k))
 		}
-		lines = append(lines, dim.Render("  all sections hidden: press "+strings.Join(letters, ", ")+" to show them"))
+		add(railRoleRun, dim.Render("  all sections hidden: press "+strings.Join(letters, ", ")+" to show them"))
 	}
 
 	m.page.offset = scrollOffset(selLine, m.page.offset, l.body, len(lines))
+	now := time.Now()
+	m.page.rail.advance(l.body, now, m.changes.lastWarn)
 	for i := 0; i < l.body; i++ {
-		if idx := m.page.offset + i; idx < len(lines) {
+		idx := m.page.offset + i
+		b.WriteString(railDraw(roleAt(role, idx), m.page.rail.cell(i)))
+		if idx < len(lines) {
 			b.WriteString(lines[idx])
 		}
 		b.WriteByte('\n')
@@ -420,7 +464,7 @@ func (m *model) pageView() string {
 	if m.page.jumpBuf != "" && time.Since(m.page.jumpAt) < jumpWindow {
 		line = "go to #[" + m.page.jumpBuf + "]"
 	}
-	tui := hints("[q/a] scroll changes  [Q/A] resize TUI  [esc] quit")
+	tui := hints("[shift+section] sort  [q/a] scroll changes  [Q/A] resize TUI  [esc] quit")
 	b.WriteString(m.navBarCommands(hints(line), tui))
 	b.WriteByte('\n')
 	b.WriteString(m.navBarResources())

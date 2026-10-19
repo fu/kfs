@@ -1,6 +1,7 @@
 package gitops
 
 import (
+	"fmt"
 	"slices"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 // What an app row shows. PARENT is the app that deploys this one, lit by the
 // worst light up that chain, so a green app under a broken parent does not
 // look fine. Flux mixes Kustomizations and HelmReleases, so it gets a KIND.
+// MANAGED is how many objects the app deploys.
 func (r *Resource) Columns() []resources.Column {
 	cols := []resources.Column{
 		{Title: "SYNC"}, {Title: "HEALTH"},
@@ -18,6 +20,7 @@ func (r *Resource) Columns() []resources.Column {
 		{Title: "DEST"},
 		{Title: "PARENT", Middle: true, Shrink: true},
 		{Title: "SOURCE", Middle: true, Shrink: true},
+		{Title: "MANAGED", Right: true},
 		{Title: "REV"},
 		{Title: "SYNCED"},
 	}
@@ -51,12 +54,14 @@ func (r *Resource) Rows() []resources.Row {
 		if p, ok := parents[k]; ok {
 			parent = resources.Cell{Text: "● " + apps[p].Name, Tone: resources.Light(int(ChainLight(k, apps, parents)))}
 		}
+		managed := resources.Cell{Text: fmt.Sprint(len(a.Manages)), Tone: resources.Dim}
 		cells := []resources.Cell{
 			sync, health,
 			{Text: a.Name},
 			{Text: a.DestNS, Tone: resources.Dim},
 			parent,
 			{Text: a.Source, Tone: resources.Dim},
+			managed,
 			{Text: a.Revision, Tone: resources.Dim},
 			synced,
 		}

@@ -20,8 +20,10 @@ import (
 	"github.com/fu/k7s/internal/config"
 	"github.com/fu/k7s/internal/kube"
 	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/k7s/internal/resources/configmaps"
 	"github.com/fu/k7s/internal/resources/deployments"
 	"github.com/fu/k7s/internal/resources/gitops"
+	"github.com/fu/k7s/internal/resources/ingressroutes"
 	"github.com/fu/k7s/internal/resources/pods"
 	podcommands "github.com/fu/k7s/internal/resources/pods/commands"
 	"github.com/fu/k7s/internal/resources/pvcs"
@@ -29,6 +31,7 @@ import (
 	"github.com/fu/k7s/internal/resources/replicasets"
 	"github.com/fu/k7s/internal/resources/secrets"
 	secretcommands "github.com/fu/k7s/internal/resources/secrets/commands"
+	"github.com/fu/k7s/internal/resources/services"
 )
 
 // registry lists the kinds in display order. Each name's first letter (or
@@ -36,7 +39,8 @@ import (
 // key of the page.
 func registry() []resources.Resource {
 	return []resources.Resource{
-		gitops.New(), deployments.New(), replicasets.New(), pods.New(), pvcs.New(), pvs.New(), secrets.New(),
+		gitops.New(), deployments.New(), replicasets.New(), pods.New(), services.New(), ingressroutes.New(),
+		configmaps.New(), pvcs.New(), pvs.New(), secrets.New(),
 	}
 }
 

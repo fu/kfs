@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 
@@ -20,18 +21,22 @@ import (
 const maxChanges = 1000
 
 type changeLog struct {
-	entries []resources.Change // oldest first
-	back    int                // lines scrolled up
-	gen     int                // of the event watch
-	cancel  context.CancelFunc
+	entries  []resources.Change // oldest first
+	back     int                // lines scrolled up
+	gen      int                // of the event watch
+	lastWarn time.Time          // when a WARNING last landed (taints the rail red)
+	cancel   context.CancelFunc
 }
 
-func (c *changeLog) reset() { c.entries, c.back = nil, 0 }
+func (c *changeLog) reset() { c.entries, c.back, c.lastWarn = nil, 0, time.Time{} }
 
 // add keeps entries in time order: events from before the watch started
 // carry their own, older timestamps.
 func (c *changeLog) add(e resources.Change) {
 	c.entries = append(c.entries, e)
+	if e.Kind == resources.Warning {
+		c.lastWarn = time.Now()
+	}
 	if n := len(c.entries); n > 1 && c.entries[n-2].At.After(e.At) {
 		sort.SliceStable(c.entries, func(i, j int) bool { return c.entries[i].At.Before(c.entries[j].At) })
 	}
@@ -57,11 +62,17 @@ func (c *changeLog) view(n, width int) string {
 	c.back = max(0, min(c.back, len(all)-n))
 
 	var b strings.Builder
-	title := fmt.Sprintf("─ changes (%d) ", len(shown))
+	// The separator doubles as the rail's foot: a bright corner at the left
+	// edge where the vertical rail turns, then the same flowing wave running
+	// left to right across the rest of the line.
+	head := fmt.Sprintf(" changes (%d) ", len(shown))
 	if c.back > 0 {
-		title += fmt.Sprintf("▲ scrolled up %d lines (a to go down) ", c.back)
+		head += fmt.Sprintf("▲ scrolled up %d lines (a to go down) ", c.back)
 	}
-	b.WriteString(dim.Render(title + strings.Repeat("─", max(0, width-lipgloss.Width(title)))))
+	b.WriteString(railFoot(c.lastWarn) + dim.Render(head))
+	if rest := width - 1 - lipgloss.Width(head); rest > 0 {
+		b.WriteString(railFlowLine(rest, railBeat(), c.lastWarn))
+	}
 	b.WriteByte('\n')
 
 	end := len(all) - c.back
