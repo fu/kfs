@@ -21,9 +21,10 @@ import (
 // A slot where something changed is cyan, red when an alert came in, and it
 // fades as it travels: bright and solid near now, then thinner, then dotted
 // (┃ │ : .) towards the far end; a busy slot stays one step brighter. Where
-// nothing happened the rail is a plain grey line with a faint pattern in it.
-// The pattern belongs to the time, not the screen, so it walks along with
-// the changes and the rail never stands still.
+// nothing happened the rail is grey packets that swell and fade, with gaps
+// between them (". : │ │ : .   . : ."). They flow on a steady beat of their
+// own, faster than the changes: a new piece appears right under the badge
+// every railFlow and the rest move on by one, so the rail never stands still.
 
 // railWidth is the column the rail takes left of the sections.
 const railWidth = 1
@@ -40,24 +41,33 @@ var railCursorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00e5ff")).
 // railBusy is how many changes in one slot keep it one fade step brighter.
 const railBusy = 3
 
-// railGlyphs are the characters of one stretch of the rail: fade from fresh
-// to old, and the background pattern (mostly the plain line).
+// railGlyphs are the characters of one stretch of the rail: a change faded
+// from fresh to old, and the grey packets by height (0 is the gap).
 type railGlyphs struct {
 	fade [4]string
 	bg   [4]string
 }
 
 var (
-	railDown   = railGlyphs{fade: [4]string{"┃", "│", ":", "."}, bg: [4]string{"│", "│", "╎", "┆"}}
+	railDown   = railGlyphs{fade: [4]string{"┃", "│", ":", "."}, bg: [4]string{" ", ".", ":", "│"}}
 	railCorner = railGlyphs{fade: [4]string{"┗", "╰", "╰", "╰"}, bg: [4]string{"╰", "╰", "╰", "╰"}}
-	railAlong  = railGlyphs{fade: [4]string{"━", "─", "┄", "·"}, bg: [4]string{"─", "─", "╌", "┄"}}
+	railAlong  = railGlyphs{fade: [4]string{"━", "─", "┄", "·"}, bg: [4]string{" ", "·", "╌", "─"}}
 )
 
-// The fade steps' colors, and the background's two greys.
+// The fade steps' colors, and the packets' greys by height.
 var (
 	railCyan = fadeStyles("#00e5ff", "#00afc8", "#1a7f8e", "#0f5560")
 	railRed  = fadeStyles("#ff3b3b", "#d23232", "#9e2a2a", "#6e2222")
-	railBg   = fadeStyles("#4e4e4e", "#585858", "#4e4e4e", "#444444")
+	railBg   = fadeStyles("#4e4e4e", "#444444", "#4e4e4e", "#5f5f5f")
+)
+
+// The grey packets: they flow down and along one slot every railFlow,
+// whatever the rail's time scale, cut into blocks of railBlock slots; a block
+// holds one packet of up to railPacket slots, or none (a longer gap).
+const (
+	railFlow   = 300 * time.Millisecond
+	railBlock  = 12
+	railPacket = 9
 )
 
 func fadeStyles(colors ...string) [4]lipgloss.Style {
@@ -140,11 +150,10 @@ func (r *rail) span() time.Duration {
 func (r *rail) view(rows, along int, now time.Time) railView {
 	n := rows + 1 + along
 	s := r.slots(n, now)
-	// The background pattern hangs on absolute time: slot i shows the
-	// pattern of the slot-long stretch of time it covers, so it moves on by
-	// one slot whenever a slot's worth of time has passed.
-	step := max(1, int64(r.span())/int64(max(1, n)))
-	first := now.UnixNano() / step
+	// The grey packets flow on their own steady beat: slot i shows the
+	// piece born i beats ago, so a new piece appears under the badge every
+	// railFlow and the rest move on by one.
+	first := now.UnixNano() / int64(railFlow)
 	draw := func(i int, g railGlyphs) string {
 		return s[i].glyph(g, i, n, first-int64(i))
 	}
@@ -178,20 +187,32 @@ func (s railSlot) glyph(g railGlyphs, i, n int, t int64) string {
 	return railCyan[step].Render(g.fade[step])
 }
 
-// railPattern picks the background of a time bucket: mostly the plain line
-// (0), now and then a lighter (1), broken (2) or dotted (3) piece.
+// railPattern is the height (0 gap, 1 ".", 2 ":", 3 "│") of the grey packet
+// at time bucket t. Each block of railBlock buckets draws its packet's
+// length and peak from a hash of the block: it swells up to the peak and
+// fades again (". : │ │ : ."), the rest of the block is gap.
 func railPattern(t int64) int {
-	x := uint64(t) * 0x9e3779b97f4a7c15 // splitmix64
+	block, j := t/railBlock, int(t%railBlock)
+	if j < 0 {
+		block, j = block-1, j+railBlock
+	}
+	x := hash64(uint64(block))
+	length := int(x % (railPacket + 1)) // 0: no packet in this block
+	// Longer packets swell higher; now and then one stays a step lower.
+	peak := min(3, (length+1)/2)
+	if (x>>8)%4 == 0 {
+		peak = max(1, peak-1)
+	}
+	if j >= length {
+		return 0
+	}
+	return min(j+1, length-j, peak)
+}
+
+// hash64 is splitmix64's finalizer: a well-mixed number for every block.
+func hash64(x uint64) uint64 {
+	x = (x + 0x9e3779b97f4a7c15)
 	x = (x ^ x>>30) * 0xbf58476d1ce4e5b9
 	x = (x ^ x>>27) * 0x94d049bb133111eb
-	x ^= x >> 31
-	switch r := x % 20; {
-	case r < 13:
-		return 0
-	case r < 16:
-		return 1
-	case r < 18:
-		return 2
-	}
-	return 3
+	return x ^ x>>31
 }

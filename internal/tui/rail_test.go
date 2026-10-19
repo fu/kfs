@@ -59,15 +59,35 @@ func TestRailSkipsHiddenChanges(t *testing.T) {
 	}
 }
 
-// The background pattern belongs to the time: a slot's worth of time later,
-// every slot shows what the slot before it showed.
+// The grey packets flow: one railFlow later, every slot shows what the slot
+// before it showed, whatever the rail's time scale.
 func TestRailPatternWalks(t *testing.T) {
-	r := rail{window: 21 * time.Second} // 21 slots: one second each
+	r := rail{window: 10 * time.Minute}
 	now := time.Unix(1000, 0)
-	before := []rune(ansi.Strip(r.view(0, 20, now).along))
-	after := []rune(ansi.Strip(r.view(0, 20, now.Add(time.Second)).along))
+	before := []rune(ansi.Strip(r.view(0, 60, now).along))
+	after := []rune(ansi.Strip(r.view(0, 60, now.Add(railFlow)).along))
 	if string(after[1:]) != string(before[:len(before)-1]) {
 		t.Errorf("pattern did not move on by one:\n%s\n%s", string(before), string(after))
+	}
+}
+
+// The grey packets swell and fade one step at a time (". : │ : ."), with
+// gaps between them, and there are packets of every height.
+func TestRailPatternIsPackets(t *testing.T) {
+	heights := map[int]bool{}
+	prev := 0
+	for b := int64(-500); b < 5000; b++ {
+		h := railPattern(b)
+		heights[h] = true
+		if d := h - prev; d > 1 || d < -1 {
+			t.Fatalf("bucket %d: height %d after %d, want one step at a time", b, h, prev)
+		}
+		prev = h
+	}
+	for h := 0; h <= 3; h++ {
+		if !heights[h] {
+			t.Errorf("no packet piece of height %d", h)
+		}
 	}
 }
 

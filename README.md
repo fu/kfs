@@ -147,8 +147,9 @@ finer: an alert that fills one slot on a small screen may fill two on a large
 one. A slot where something changed is cyan (red for a warning or a failing
 state) and fades as it travels: solid near now, then thinner, then dotted
 (`┃ │ : .` down, `━ ─ ┄ ·` along); a busy slot stays a step brighter. Where
-nothing happened the rail is a plain grey line with a faint random pattern
-(`╎ ┆`, a lighter grey) that belongs to the time, so it walks along too. It counts what the change log
+nothing happened the rail is grey packets that swell and fade with gaps
+between them (`. : │ │ : .   . : .`), flowing on a steady beat of their own:
+a new piece appears right under the badge every 300 ms and the rest move on. It counts what the change log
 shows, so the filter applies to it too. The rail also follows the selection:
 an arrow (`▶`) where it passes the selected row, and a bulb (`●`) breathing
 with the "watching" dot by every row linked to it.
