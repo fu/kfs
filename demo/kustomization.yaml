@@ -1,0 +1,27 @@
+# The kfs demo: one namespace with a bit of everything kfs shows.
+#
+#   kubectl apply -k demo
+#
+# Names are placeholders (web, db, app, sidecar …) until there is a theme;
+# rename them here and in the files below. Flux can point a Kustomization at
+# this folder as it is.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: shop
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: shop
+    includeSelectors: false
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - web-config.yaml
+  - web.yaml
+  - web-service.yaml
+  - web-ingressroute.yaml
+  - db-config.yaml
+  - db.yaml
+  - db-service.yaml

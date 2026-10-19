@@ -1,0 +1,63 @@
+# The second pod: a StatefulSet (no ReplicaSet), so the page has one
+# Deployment with one ReplicaSet and two pods. Its volume claim template
+# brings a PersistentVolumeClaim and, with a dynamic provisioner (k3s's
+# local-path, kind's standard), a PersistentVolume.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db
+  labels:
+    app.kubernetes.io/name: db
+    app.kubernetes.io/instance: shop-db
+spec:
+  serviceName: db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: db
+        app.kubernetes.io/instance: shop-db
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.4-alpine
+          args: ["/etc/redis/redis.conf", "--requirepass", "$(REDIS_PASSWORD)"]
+          command: ["redis-server"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-auth
+                  key: password
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: redis
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /etc/redis
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 96Mi }
+      volumes:
+        - name: config
+          configMap:
+            name: db-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app.kubernetes.io/name: db
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

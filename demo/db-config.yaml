@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+  labels:
+    app.kubernetes.io/name: db
+data:
+  redis.conf: |
+    appendonly yes
+    dir /data
+    maxmemory 32mb
+    maxmemory-policy allkeys-lru

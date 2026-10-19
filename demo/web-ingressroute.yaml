@@ -1,0 +1,23 @@
+# Traefik IngressRoute (k3s / k3d ship Traefik). On a cluster without the
+# Traefik CRDs, drop this file from kustomization.yaml; kfs then hides the
+# section.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: web
+  labels:
+    app.kubernetes.io/name: web
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`shop.localhost`)
+      kind: Rule
+      services:
+        - name: web
+          port: 80
+    - match: Host(`shop.localhost`) && PathPrefix(`/health`)
+      kind: Rule
+      services:
+        - name: web
+          port: 80

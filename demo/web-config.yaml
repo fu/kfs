@@ -1,0 +1,26 @@
+# Two configmaps for web: the page it serves (mounted) and settings (env).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-html
+  labels:
+    app.kubernetes.io/name: web
+data:
+  index.html: |
+    <!doctype html>
+    <title>shop</title>
+    <h1>shop</h1>
+    <p>served by the kfs demo</p>
+  health.html: |
+    ok
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-env
+  labels:
+    app.kubernetes.io/name: web
+data:
+  SHOP_NAME: shop
+  SHOP_GREETING: hello
+  LOG_LEVEL: info

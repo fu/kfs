@@ -1,0 +1,15 @@
+# Headless: the StatefulSet's own service (CLUSTER-IP None in kfs).
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  labels:
+    app.kubernetes.io/name: db
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: db
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
