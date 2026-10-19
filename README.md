@@ -124,11 +124,12 @@ and everything in it is shown.
     opened secret, never kept in the list.
 
 **Links**: the selected row lights up (dark teal) everything linked to it,
-across sections, following app → Deployment → ReplicaSet → pods → secrets
-and claims → volumes. A service reaches the pods its selector picks out; an
-IngressRoute reaches the services behind its routes — so a service lights up
-its pods (and their workloads and app), and an ingress route lights up its
-services and everything behind them.
+across sections, following app → Deployment → ReplicaSet → pods → secrets,
+configmaps and claims → volumes. A service reaches the pods its selector
+picks out and whatever runs them; an IngressRoute reaches the services behind
+its routes — so a service lights up its pods and their Deployment, an ingress
+route its services and everything behind them, and a Deployment (or a
+configmap it uses) the services and ingress routes in front of it.
 Select an app to see its deployments, their replicasets, pods and the
 secrets they use. Select a pod to see its replicaset, deployment, app and
 secrets. Select a secret to see who uses it, up to the app. Secrets are

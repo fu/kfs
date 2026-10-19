@@ -28,6 +28,7 @@ type Row struct {
 	Created                            time.Time
 	Secrets                            []string // used by its pod template
 	Claims                             []string // volume claims its pod template mounts
+	ConfigMaps                         []string // used by its pod template
 	Stuck                              string   // why the rollout cannot progress, if it cannot
 	Progress                           string   // the Progressing condition's reason
 }
@@ -42,16 +43,17 @@ func (d Row) ReadyString() string { return fmt.Sprintf("%d/%d", d.Ready, d.Desir
 
 func fromDeployment(o *appsv1.Deployment) Row {
 	d := Row{
-		Namespace: o.Namespace,
-		Name:      o.Name,
-		Desired:   1,
-		Ready:     o.Status.ReadyReplicas,
-		Updated:   o.Status.UpdatedReplicas,
-		Available: o.Status.AvailableReplicas,
-		Paused:    o.Spec.Paused,
-		Created:   o.CreationTimestamp.Time,
-		Secrets:   pods.SecretsUsed(&o.Spec.Template.Spec),
-		Claims:    pods.ClaimsUsed(&o.Spec.Template.Spec),
+		Namespace:  o.Namespace,
+		Name:       o.Name,
+		Desired:    1,
+		Ready:      o.Status.ReadyReplicas,
+		Updated:    o.Status.UpdatedReplicas,
+		Available:  o.Status.AvailableReplicas,
+		Paused:     o.Spec.Paused,
+		Created:    o.CreationTimestamp.Time,
+		Secrets:    pods.SecretsUsed(&o.Spec.Template.Spec),
+		Claims:     pods.ClaimsUsed(&o.Spec.Template.Spec),
+		ConfigMaps: pods.ConfigMapsUsed(&o.Spec.Template.Spec),
 	}
 	if o.Spec.Replicas != nil {
 		d.Desired = *o.Spec.Replicas

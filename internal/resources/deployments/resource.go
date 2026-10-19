@@ -133,8 +133,8 @@ func (r *Resource) Listed() []resources.Ref {
 	return out
 }
 
-// Links: a Deployment's pods use the secrets and volume claims of its
-// template.
+// Links: a Deployment's pods use the secrets, volume claims and configmaps
+// of its template.
 func (r *Resource) Links() []resources.Link {
 	var out []resources.Link
 	for _, k := range r.order {
@@ -144,6 +144,9 @@ func (r *Resource) Links() []resources.Link {
 		}
 		for _, c := range d.Claims {
 			out = append(out, resources.Link{From: d.ref(), To: resources.Ref{Kind: "PersistentVolumeClaim", Namespace: d.Namespace, Name: c}})
+		}
+		for _, c := range d.ConfigMaps {
+			out = append(out, resources.Link{From: d.ref(), To: resources.Ref{Kind: "ConfigMap", Namespace: d.Namespace, Name: c}})
 		}
 	}
 	return out

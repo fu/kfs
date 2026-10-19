@@ -47,5 +47,33 @@ func (m *model) pageLinks() []resources.Link {
 			out = append(out, l.Links()...)
 		}
 	}
+	return serveWorkloads(out)
+}
+
+// serveWorkloads adds a link from a Service to whatever runs the pods it
+// selects (their ReplicaSet, Deployment, StatefulSet …). Following links
+// never turns round, so without these a service would reach its pods but not
+// their Deployment, and a Deployment (or its app) never its Service and the
+// IngressRoute in front of it.
+func serveWorkloads(links []resources.Link) []resources.Link {
+	runs := map[resources.Ref][]resources.Ref{} // pod → what runs it
+	for _, l := range links {
+		if l.To.Kind == "Pod" && l.From.Kind != "Service" {
+			runs[l.To] = append(runs[l.To], l.From)
+		}
+	}
+	seen := map[resources.Link]bool{}
+	out := links
+	for _, l := range links {
+		if l.From.Kind != "Service" || l.To.Kind != "Pod" {
+			continue
+		}
+		for _, w := range runs[l.To] {
+			if s := (resources.Link{From: l.From, To: w}); !seen[s] {
+				seen[s] = true
+				out = append(out, s)
+			}
+		}
+	}
 	return out
 }

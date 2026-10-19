@@ -7,7 +7,7 @@ import (
 )
 
 // Links: its controller (a ReplicaSet, a Job, …) and the workload above it
-// run the pod; the pod uses its secrets and volume claims.
+// run the pod; the pod uses its secrets, volume claims and configmaps.
 func (r *Resource) Links() []resources.Link {
 	var out []resources.Link
 	for _, k := range r.order {
@@ -27,6 +27,9 @@ func (r *Resource) Links() []resources.Link {
 		}
 		for _, c := range p.Claims {
 			out = append(out, resources.Link{From: pod, To: resources.Ref{Kind: "PersistentVolumeClaim", Namespace: p.Namespace, Name: c}})
+		}
+		for _, c := range p.ConfigMaps {
+			out = append(out, resources.Link{From: pod, To: resources.Ref{Kind: "ConfigMap", Namespace: p.Namespace, Name: c}})
 		}
 	}
 	return out

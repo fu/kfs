@@ -48,6 +48,8 @@ type Row struct {
 	Secrets []string
 	// Claims are the PersistentVolumeClaims it mounts.
 	Claims []string
+	// ConfigMaps the pod uses: volumes, env, envFrom.
+	ConfigMaps []string
 
 	// Most recent non-clean container exit, and which container it was.
 	LastExit          Termination
@@ -148,7 +150,50 @@ func FromPod(pod *corev1.Pod) Row {
 	r.OwnerKind, r.OwnerName = owner(pod)
 	r.Secrets = SecretsUsed(&pod.Spec)
 	r.Claims = ClaimsUsed(&pod.Spec)
+	r.ConfigMaps = ConfigMapsUsed(&pod.Spec)
 	return r
+}
+
+// ConfigMapsUsed lists the configmaps a pod (or a pod template) mounts or
+// reads into its environment, sorted.
+func ConfigMapsUsed(spec *corev1.PodSpec) []string {
+	seen := map[string]bool{}
+	add := func(name string) {
+		if name != "" {
+			seen[name] = true
+		}
+	}
+	for _, v := range spec.Volumes {
+		if v.ConfigMap != nil {
+			add(v.ConfigMap.Name)
+		}
+		if v.Projected != nil {
+			for _, s := range v.Projected.Sources {
+				if s.ConfigMap != nil {
+					add(s.ConfigMap.Name)
+				}
+			}
+		}
+	}
+	containers := append(append([]corev1.Container{}, spec.InitContainers...), spec.Containers...)
+	for _, c := range containers {
+		for _, e := range c.Env {
+			if e.ValueFrom != nil && e.ValueFrom.ConfigMapKeyRef != nil {
+				add(e.ValueFrom.ConfigMapKeyRef.Name)
+			}
+		}
+		for _, e := range c.EnvFrom {
+			if e.ConfigMapRef != nil {
+				add(e.ConfigMapRef.Name)
+			}
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for s := range seen {
+		out = append(out, s)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // ClaimsUsed lists the PersistentVolumeClaims a pod (or a pod template)
