@@ -1,4 +1,4 @@
-// Package resources is the contract every kind shown by k7s implements; the
+// Package resources is the contract every kind shown by kfs implements; the
 // kinds themselves are its sub folders (pods, secrets, gitops, …).
 //
 // A kind watches its objects in the current namespace (and filter) and says
@@ -17,7 +17,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/fu/k7s/internal/kube"
+	"github.com/fu/kfs/internal/kube"
 )
 
 // Resource is one kind on the page: a section with a table and the watch
@@ -98,7 +98,7 @@ type Link struct {
 
 // Host is what a kind gets from the app.
 type Host interface {
-	Context() context.Context // ends when k7s quits; Start derives its own per scope
+	Context() context.Context // ends when kfs quits; Start derives its own per scope
 	Client() *kube.Client
 	Namespace() string
 	Selector() string
@@ -137,6 +137,6 @@ const (
 	Deleted  ChangeKind = "DELETED"
 	Warning  ChangeKind = "WARNING"
 	Event    ChangeKind = "EVENT"
-	State    ChangeKind = "STATE" // already unhealthy when k7s started
+	State    ChangeKind = "STATE" // already unhealthy when kfs started
 	Forward  ChangeKind = "FORWARD"
 )

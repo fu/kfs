@@ -11,8 +11,8 @@
 package commands
 
 import (
-	"github.com/fu/k7s/internal/resources"
-	"github.com/fu/k7s/internal/resources/pods"
+	"github.com/fu/kfs/internal/resources"
+	"github.com/fu/kfs/internal/resources/pods"
 )
 
 // All are the pods' commands, in hint order.

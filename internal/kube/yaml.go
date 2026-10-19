@@ -8,7 +8,7 @@ import (
 )
 
 // YAML is "kubectl get <kind> <name> -o yaml", without managedFields. A
-// secret's values are masked (their size kept): k7s never shows them
+// secret's values are masked (their size kept): kfs never shows them
 // unasked. ns is ignored for cluster-scoped kinds.
 func (c *Client) YAML(ctx context.Context, kind, ns, name string) (string, error) {
 	m, err := c.mappingFor(kind)

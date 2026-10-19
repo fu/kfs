@@ -9,13 +9,13 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/fu/k7s/internal/kube"
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/kube"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // The change log under the sections: what the kinds log, plus the
 // Kubernetes events of the namespace (including the last hour or so from
-// before k7s started).
+// before kfs started).
 
 const maxChanges = 1000
 

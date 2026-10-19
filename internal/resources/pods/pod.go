@@ -2,7 +2,7 @@
 // restarts and CPU/MEM; the selected pod offers logs, a shell and
 // port-forwarding.
 //
-//	pod.go       a pod as k7s sees it (READY/STATUS like kubectl, why it exits)
+//	pod.go       a pod as kfs sees it (READY/STATUS like kubectl, why it exits)
 //	watch.go     the pod watch and the metrics poll
 //	resource.go  state, change log, actions
 //	row.go       what a row shows
@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/fu/k7s/internal/kube"
+	"github.com/fu/kfs/internal/kube"
 )
 
 // Row is the flattened view of a pod.

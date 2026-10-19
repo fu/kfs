@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/fu/k7s/internal/kube"
+	"github.com/fu/kfs/internal/kube"
 )
 
 type EventType string

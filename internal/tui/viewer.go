@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // The viewer screen: text from a Viewer step, streamed (logs: following the

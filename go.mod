@@ -1,4 +1,4 @@
-module github.com/fu/k7s
+module github.com/fu/kfs
 
 go 1.27.2
 

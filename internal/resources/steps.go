@@ -27,7 +27,7 @@ type Picker struct {
 	// every Every while the picker is open (0 = once).
 	Load  func(ctx context.Context) ([]Row, error)
 	Every time.Duration
-	// Live, if set, adds rows computed from what k7s already knows, fresh on
+	// Live, if set, adds rows computed from what kfs already knows, fresh on
 	// every frame (after the loaded ones).
 	Live func() []Row
 	Pick func(key string) Step

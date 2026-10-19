@@ -10,8 +10,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/fu/k7s/internal/kube"
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/kube"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // Resource is the gitops kind. The watch covers all apps of the cluster, so
@@ -361,7 +361,7 @@ type explainedMsg struct {
 }
 
 // explain logs a change of an app that is not green with everything that
-// says why: the problem resources Argo CD / Flux list, and what k7s finds
+// says why: the problem resources Argo CD / Flux list, and what kfs finds
 // looking at what the app manages itself (child apps, workloads, their
 // failing pods) — Argo CD 3 keeps resource health elsewhere, so its list is
 // often empty. The entry is logged once that look is done.

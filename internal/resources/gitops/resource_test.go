@@ -3,7 +3,7 @@ package gitops
 import (
 	"testing"
 
-	"github.com/fu/k7s/internal/resources/restest"
+	"github.com/fu/kfs/internal/resources/restest"
 )
 
 func TestChangesSayWhatBrokeAndWhatGotFixed(t *testing.T) {
@@ -16,7 +16,7 @@ func TestChangesSayWhatBrokeAndWhatGotFixed(t *testing.T) {
 	broken.Health, broken.HealthL = "Degraded", Red
 	broken.Problems = []string{"Deployment web Degraded: exceeded its progress deadline"}
 	broken.Why = []string{"Deployment web Degraded"}
-	// Getting worse is logged once k7s has looked at what the app manages.
+	// Getting worse is logged once kfs has looked at what the app manages.
 	if cmd := r.apply(Event{Type: Modified, App: broken}); cmd != nil {
 		r.Update(cmd())
 	}

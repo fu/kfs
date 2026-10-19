@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"github.com/fu/k7s/internal/resources"
-	"github.com/fu/k7s/internal/resources/pods"
+	"github.com/fu/kfs/internal/resources"
+	"github.com/fu/kfs/internal/resources/pods"
 )
 
 // pickContainer resolves the container for a command. If t.Sub is set (a

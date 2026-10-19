@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fu/k7s/internal/kube"
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/kube"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // What a pod row shows. On narrow terminals pod names shrink first, then

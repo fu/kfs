@@ -11,7 +11,7 @@ import (
 	"golang.org/x/term"
 	utilexec "k8s.io/client-go/util/exec"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // Exec steps: Bubble Tea hands the terminal to an interactive program (e.g.
@@ -34,7 +34,7 @@ func (c *execCmd) SetStdout(w io.Writer) { c.stdout = w }
 func (c *execCmd) SetStderr(io.Writer)   {}
 
 func (c *execCmd) Run() error {
-	fmt.Fprintf(c.stdout, "\n%s %s\n\n", badge.Render("k7s"), c.e.Banner)
+	fmt.Fprintf(c.stdout, "\n%s %s\n\n", badge.Render("kfs"), c.e.Banner)
 
 	if f, ok := c.stdin.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
 		if old, err := term.MakeRaw(int(f.Fd())); err == nil {
@@ -46,7 +46,7 @@ func (c *execCmd) Run() error {
 
 	// client-go keeps copying stdin in a goroutine after the remote program
 	// exits; without cancelling it, that goroutine swallows the next key
-	// pressed in k7s.
+	// pressed in kfs.
 	stdin := c.stdin
 	if cr, err := cancelreader.NewReader(c.stdin); err == nil {
 		defer cr.Close()
@@ -55,7 +55,7 @@ func (c *execCmd) Run() error {
 	}
 
 	err := c.e.Run(stdin, c.stdout, sizes)
-	// A non-zero exit of the last command in a shell is not a k7s error.
+	// A non-zero exit of the last command in a shell is not a kfs error.
 	var exitErr utilexec.ExitError
 	if errors.As(err, &exitErr) {
 		return nil

@@ -9,8 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/fu/k7s/internal/kube"
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/kube"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // The filter pane has two parts:

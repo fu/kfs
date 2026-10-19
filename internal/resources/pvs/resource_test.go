@@ -6,8 +6,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/fu/k7s/internal/resources"
-	"github.com/fu/k7s/internal/resources/restest"
+	"github.com/fu/kfs/internal/resources"
+	"github.com/fu/kfs/internal/resources/restest"
 )
 
 func volume(name, claimNS, claim string, phase corev1.PersistentVolumePhase) *corev1.PersistentVolume {

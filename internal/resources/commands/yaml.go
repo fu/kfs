@@ -3,7 +3,7 @@ package commands
 import (
 	"context"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // YAML is "kubectl get -o yaml" of the row's object, without managedFields;

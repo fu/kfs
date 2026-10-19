@@ -8,12 +8,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/fu/k7s/internal/kube"
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/kube"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // Print shows every section once, the same rows as the page, and returns
-// (k7s --once, or when stdout is not a terminal).
+// (kfs --once, or when stdout is not a terminal).
 func Print(ctx context.Context, client *kube.Client, info Info, w io.Writer) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()

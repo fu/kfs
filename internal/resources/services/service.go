@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // Row is one service, as its row and the change log need it.

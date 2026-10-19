@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// The rail is a time line. It starts under the k7s badge, runs down the left
+// The rail is a time line. It starts under the kfs badge, runs down the left
 // edge of the sections, turns at the divider and runs along it to the right
 // edge: top-left is now, the far right end is `rail.minutes` ago (config).
 //

@@ -5,8 +5,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/fu/k7s/internal/kube"
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/kube"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // What an app row shows. PARENT is the app that deploys this one, lit by the

@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 func TestLinkedFollowsBothWaysButNotSideways(t *testing.T) {

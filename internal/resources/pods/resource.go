@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // Resource is the pods kind.
@@ -29,7 +29,7 @@ type Resource struct {
 	watchErr       error
 	watchErrAt     time.Time
 
-	// Port-forwards outlive namespace switches; they end when k7s quits.
+	// Port-forwards outlive namespace switches; they end when kfs quits.
 	forwards map[string]*forward
 }
 

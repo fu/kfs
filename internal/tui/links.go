@@ -1,6 +1,6 @@
 package tui
 
-import "github.com/fu/k7s/internal/resources"
+import "github.com/fu/kfs/internal/resources"
 
 // The link view: everything linked to the selected row is highlighted,
 // across sections. Links are followed both ways — down to what it leads to

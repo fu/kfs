@@ -10,12 +10,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/fu/k7s/internal/kube"
-	"github.com/fu/k7s/internal/resources/pods"
+	"github.com/fu/kfs/internal/kube"
+	"github.com/fu/kfs/internal/resources/pods"
 )
 
 // Why an app is not green. Argo CD 3 no longer keeps each resource's health
-// in the Application, so "Degraded" often comes without a reason; k7s then
+// in the Application, so "Degraded" often comes without a reason; kfs then
 // looks at what the app manages itself: its child apps (app of apps) and
 // its workloads — and for an unhealthy workload, its failing pods.
 

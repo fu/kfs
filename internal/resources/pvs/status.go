@@ -3,7 +3,7 @@ package pvs
 import (
 	"time"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // What the volumes can show in the status line; the config picks which (by

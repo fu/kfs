@@ -2,7 +2,7 @@
 // and available, a status light and the images; the change log tells
 // rollouts, scaling and why a rollout is stuck.
 //
-//	deployment.go  a Deployment as k7s sees it
+//	deployment.go  a Deployment as kfs sees it
 //	resource.go    watch, state, change log, links
 //	row.go         what a row shows
 package deployments
@@ -15,8 +15,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/fu/k7s/internal/resources"
-	"github.com/fu/k7s/internal/resources/pods"
+	"github.com/fu/kfs/internal/resources"
+	"github.com/fu/kfs/internal/resources/pods"
 )
 
 // Row is the flattened view of a Deployment.

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // What the secrets can show in the status line; the config picks which.

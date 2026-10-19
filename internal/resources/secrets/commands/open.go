@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/fu/k7s/internal/resources"
-	"github.com/fu/k7s/internal/resources/secrets"
+	"github.com/fu/kfs/internal/resources"
+	"github.com/fu/kfs/internal/resources/secrets"
 )
 
 // All are the secrets' commands.

@@ -1,4 +1,4 @@
-// Package cmd wires the k7s command line. Flags and kubeconfig handling come
+// Package cmd wires the kfs command line. Flags and kubeconfig handling come
 // from k8s.io/cli-runtime, the same package kubectl uses, so -n, --context,
 // --kubeconfig, --as, ... behave exactly like they do in kubectl.
 package cmd
@@ -16,9 +16,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	"github.com/fu/k7s/internal/config"
-	"github.com/fu/k7s/internal/kube"
-	"github.com/fu/k7s/internal/tui"
+	"github.com/fu/kfs/internal/config"
+	"github.com/fu/kfs/internal/kube"
+	"github.com/fu/kfs/internal/tui"
 )
 
 var configFlags = genericclioptions.NewConfigFlags(true)
@@ -36,24 +36,24 @@ type options struct {
 func newRootCmd() *cobra.Command {
 	o := &options{}
 	root := &cobra.Command{
-		Use:   "k7s [-n namespace] [-l selector]",
-		Short: "k7s - one namespace, everything in it, live",
-		Long: `k7s shows one namespace on one page, updating in place: the gitops apps
+		Use:   "kfs [-n namespace] [-l selector]",
+		Short: "kfs - one namespace, everything in it, live",
+		Long: `kfs shows one namespace on one page, updating in place: the gitops apps
 that deploy it, its deployments, replicasets, pods (with CPU/MEM), services,
 ingress routes, configmaps and secrets, and a change log of everything that
 happens there — including the events from before you started.
 
 Pick the namespace with -n (default: the one you last used in this context,
-else the context's) and narrow it to one app with -l. Inside k7s, c / n / f
+else the context's) and narrow it to one app with -l. Inside kfs, c / n / f
 switch context, namespace and filter; the first letter of a section (or the
 letter its name spells, e.g. i for services) shows or hides it. Colors,
 hidden sections and the last namespaces are kept in
-~/.config/k7s/config.yaml.
+~/.config/kfs/config.yaml.
 
 Examples:
-  k7s                       # the current namespace
-  k7s -n shop -l app=web    # one app in namespace shop
-  k7s -n shop --once        # print the sections once and exit`,
+  kfs                       # the current namespace
+  kfs -n shop -l app=web    # one app in namespace shop
+  kfs -n shop --once        # print the sections once and exit`,
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		Version:      version,
@@ -65,7 +65,7 @@ Examples:
 	root.Flags().StringVarP(&o.selector, "selector", "l", "", "Label selector to narrow everything to one app (e.g. app=web)")
 	root.Flags().DurationVar(&o.refresh, "refresh", 5*time.Second, "Metrics refresh interval")
 	root.Flags().BoolVar(&o.once, "once", false, "Print the sections once and exit (default when stdout is not a terminal)")
-	root.Flags().StringVar(&o.config, "config", config.Path(), "k7s config file (colors, hidden sections, last namespaces)")
+	root.Flags().StringVar(&o.config, "config", config.Path(), "kfs config file (colors, hidden sections, last namespaces)")
 	return root
 }
 
@@ -114,7 +114,7 @@ func run(ctx context.Context, o *options) error {
 		info.Notice = "config: " + err.Error() + " (using defaults)"
 		cfg = config.Default()
 	case cfg.ReadOnly():
-		info.Notice = "config " + o.config + " is from a newer k7s: read only"
+		info.Notice = "config " + o.config + " is from a newer kfs: read only"
 	}
 	info.Config = cfg
 	// Without -n, come back to the namespace last used in this context.

@@ -3,7 +3,7 @@ package pods
 import (
 	"regexp"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // Links: its controller (a ReplicaSet, a Job, …) and the workload above it

@@ -2,7 +2,7 @@
 // the namespace (PersistentVolumes themselves belong to the cluster). With
 // a filter, only those of the listed claims.
 //
-//	volume.go    a PersistentVolume as k7s sees it
+//	volume.go    a PersistentVolume as kfs sees it
 //	resource.go  watch, state, change log, links
 //	row.go       what a row shows
 package pvs
@@ -13,7 +13,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // Row is the flattened view of a PersistentVolume.

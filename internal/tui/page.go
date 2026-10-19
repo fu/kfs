@@ -10,9 +10,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/fu/k7s/internal/config"
-	"github.com/fu/k7s/internal/resources"
-	"github.com/fu/k7s/internal/resources/commands"
+	"github.com/fu/kfs/internal/config"
+	"github.com/fu/kfs/internal/resources"
+	"github.com/fu/kfs/internal/resources/commands"
 )
 
 // The page: a status line, a section per shown kind (title and table), the
@@ -375,7 +375,7 @@ func (m *model) statusLine() string {
 	if m.info.Selector != "" {
 		filter = "filter " + cyan.Render(m.info.Selector)
 	}
-	parts := []string{badge.Render("k7s"), "ctx " + cyan.Render(m.info.Context), "ns " + cyan.Render(m.info.Namespace), filter}
+	parts := []string{badge.Render("kfs"), "ctx " + cyan.Render(m.info.Context), "ns " + cyan.Render(m.info.Namespace), filter}
 	for _, k := range m.sections() {
 		if s := m.sectionStatus(k); s != "" {
 			parts = append(parts, s)

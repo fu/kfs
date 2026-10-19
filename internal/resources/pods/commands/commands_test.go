@@ -3,9 +3,9 @@ package commands
 import (
 	"testing"
 
-	"github.com/fu/k7s/internal/resources"
-	"github.com/fu/k7s/internal/resources/pods"
-	"github.com/fu/k7s/internal/resources/restest"
+	"github.com/fu/kfs/internal/resources"
+	"github.com/fu/kfs/internal/resources/pods"
+	"github.com/fu/kfs/internal/resources/restest"
 )
 
 func TestSubRowSelectsContainerDirectly(t *testing.T) {

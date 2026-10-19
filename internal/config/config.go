@@ -1,5 +1,5 @@
-// Package config is k7s' YAML file, ~/.config/k7s/config.yaml: the colors,
-// and the state k7s comes back to (hidden sections and rows, the last
+// Package config is kfs' YAML file, ~/.config/kfs/config.yaml: the colors,
+// and the state kfs comes back to (hidden sections and rows, the last
 // namespace per context). The defaults are default.yaml, compiled in.
 package config
 
@@ -18,17 +18,13 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// Version is the file format this k7s writes. Bump it when a key is added
-// or changed (an older k7s would drop it when saving) and teach migrate how
+// Version is the file format this kfs writes. Bump it when a key is added
+// or changed (an older kfs would drop it when saving) and teach migrate how
 // to read the older ones.
 //
-//	1  version, sections, namespaces, colors
-//	2  + hide
-//	3  + commands, resource_order
-//	4  + status
-//	5  + layout
-//	6  + rail
-const Version = 6
+//	1  version, sections, resource_order, hide, commands, status, layout,
+//	   rail, namespaces, colors
+const Version = 1
 
 //go:embed default.yaml
 var defaultYAML []byte
@@ -56,7 +52,7 @@ type Config struct {
 	Colors     Colors            `yaml:"colors"`
 
 	path     string
-	readOnly bool // written by a newer k7s: never overwrite it
+	readOnly bool // written by a newer kfs: never overwrite it
 }
 
 type Sections struct {
@@ -69,7 +65,7 @@ type Layout struct {
 	ChangesPct int `yaml:"changes_pct"`
 }
 
-// Rail is the time line from the k7s badge down the left edge and along the
+// Rail is the time line from the kfs badge down the left edge and along the
 // divider: it shows the last Minutes, newest at the top.
 type Rail struct {
 	Minutes int `yaml:"minutes"`
@@ -108,15 +104,15 @@ func Default() *Config {
 	return c
 }
 
-// Path is where the config lives: $XDG_CONFIG_HOME/k7s/config.yaml, by
-// default ~/.config/k7s/config.yaml.
+// Path is where the config lives: $XDG_CONFIG_HOME/kfs/config.yaml, by
+// default ~/.config/kfs/config.yaml.
 func Path() string {
 	dir := os.Getenv("XDG_CONFIG_HOME")
 	if dir == "" {
 		home, _ := os.UserHomeDir()
 		dir = filepath.Join(home, ".config")
 	}
-	return filepath.Join(dir, "k7s", "config.yaml")
+	return filepath.Join(dir, "kfs", "config.yaml")
 }
 
 // Load reads the config at path. A missing file starts as default.yaml (and
@@ -143,7 +139,7 @@ func Load(path string) (*Config, error) {
 }
 
 // migrate brings an older file to Version. A file without a version is
-// version 1. A newer one is read as far as this k7s understands it and
+// version 1. A newer one is read as far as this kfs understands it and
 // never written back, so its settings survive.
 func (c *Config) migrate() {
 	if c.Version == 0 {
@@ -153,7 +149,6 @@ func (c *Config) migrate() {
 		c.readOnly = true
 		return
 	}
-	// Versions 2 and 3 only added keys; fill gives them their defaults.
 	c.Version = Version
 }
 
@@ -203,7 +198,7 @@ func (c *Config) fill(d *Config) {
 	}
 }
 
-// ReadOnly reports whether the file came from a newer k7s.
+// ReadOnly reports whether the file came from a newer kfs.
 func (c *Config) ReadOnly() bool { return c != nil && c.readOnly }
 
 // Save writes the config (atomically: a crash leaves the old file).

@@ -3,7 +3,7 @@
 // mounted. Pods (and their Deployments) link to the claims they mount, a
 // claim to its volume.
 //
-//	claim.go     a PersistentVolumeClaim as k7s sees it
+//	claim.go     a PersistentVolumeClaim as kfs sees it
 //	resource.go  watch, state, change log, links
 //	row.go       what a row shows
 package pvcs
@@ -14,7 +14,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // Row is the flattened view of a PersistentVolumeClaim.

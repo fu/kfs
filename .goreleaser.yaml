@@ -2,7 +2,7 @@
 # on every vX.Y.Z tag.
 version: 2
 
-project_name: k7s
+project_name: kfs
 
 before:
   hooks:
@@ -10,14 +10,14 @@ before:
 
 builds:
   - main: .
-    binary: k7s
+    binary: kfs
     env:
       - CGO_ENABLED=0
     goos: [darwin, linux, windows]
     goarch: [amd64, arm64]
     flags: [-trimpath]
     ldflags:
-      - -s -w -X github.com/fu/k7s/cmd.version={{ .Version }}
+      - -s -w -X github.com/fu/kfs/cmd.version={{ .Version }}
 
 archives:
   - formats: [tar.gz]
@@ -34,18 +34,18 @@ changelog:
   filters:
     exclude: ["^docs:", "^test:", "^ci:"]
 
-# Homebrew: writes Casks/k7s.rb to github.com/fu/homebrew-tap, so that
-#   brew install fu/tap/k7s
+# Homebrew: writes Casks/kfs.rb to github.com/fu/homebrew-tap, so that
+#   brew install fu/tap/kfs
 # works. Needs the repo secret HOMEBREW_TAP_GITHUB_TOKEN (a token that can
 # push to fu/homebrew-tap); without it this step is skipped.
 homebrew_casks:
-  - name: k7s
+  - name: kfs
     repository:
       owner: fu
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     skip_upload: '{{ if index .Env "HOMEBREW_TAP_GITHUB_TOKEN" }}false{{ else }}true{{ end }}'
-    homepage: https://github.com/fu/k7s
+    homepage: https://github.com/fu/kfs
     description: "Live kubectl views: more than kubectl, less than k9s"
     commit_author:
       name: Christian Fufezan
@@ -59,6 +59,6 @@ homebrew_casks:
     custom_block: |
       postflight_steps do
         on_macos do
-          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{staged_path}}" }}/k7s"]
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{staged_path}}" }}/kfs"]
         end
       end

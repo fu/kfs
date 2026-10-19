@@ -1,8 +1,8 @@
-# k7s
+# kfs
 
 One namespace, everything in it, live: more than `kubectl`, less than `k9s` - all linked up.
 
-k7s shows a namespace on one page that updates in place: the GitOps apps that
+kfs shows a namespace on one page that updates in place: the GitOps apps that
 deploy it, its deployments, replicasets, pods (with CPU/MEM) and secrets — and
 below them a change log
 of everything that happens there, including what happened before you started.
@@ -14,20 +14,25 @@ behave exactly like in kubectl. TUI: Bubble Tea + Lip Gloss.
 ## Install
 
 ```bash
-brew install fu/tap/k7s                  # macOS / Linux
-go install github.com/fu/k7s@latest      # or with Go
+brew install fu/tap/kfs                  # macOS / Linux
+go install github.com/fu/kfs@latest      # or with Go
 ```
 
-Or download a binary from the [releases](https://github.com/fu/k7s/releases).
+Or download a binary from the [releases](https://github.com/fu/kfs/releases).
+
+kfs was called k7s up to v0.4.3. Coming from there: `brew uninstall k7s`,
+then install kfs as above. The config now lives in `~/.config/kfs/` and
+starts again at format version 1; kfs does not read `~/.config/k7s/`, so copy
+over what you changed there by hand.
 
 ## Usage
 
 ```bash
-k7s                         # the current namespace
-k7s -n shop                 # namespace shop
-k7s -n shop -l app=web      # only one app in it
-k7s -n shop --once          # print the sections once and exit (also when piped)
-k7s --refresh 2s            # metrics poll interval (default 5s)
+kfs                         # the current namespace
+kfs -n shop                 # namespace shop
+kfs -n shop -l app=web      # only one app in it
+kfs -n shop --once          # print the sections once and exit (also when piped)
+kfs --refresh 2s            # metrics poll interval (default 5s)
 ```
 
 There are no sub commands: you pick a namespace (and optionally a filter),
@@ -36,7 +41,7 @@ and everything in it is shown.
 ## The page
 
 ```
- k7s │ ctx dev │ ns shop │ filter app=web │ gitops ● 1 apps │ deployments 1 ●1 ●0 ●0 │ pods 3 ●3 ●0 ●0 │ secrets 2 │ ● watching
+ kfs │ ctx dev │ ns shop │ filter app=web │ gitops ● 1 apps │ deployments 1 ●1 ●0 ●0 │ pods 3 ●3 ●0 ●0 │ secrets 2 │ ● watching
 
 ┆gitops
 │#  SYNC  HEALTH  NAME  DEST  PARENT      SOURCE              REV      SYNCED
@@ -130,7 +135,7 @@ secrets. Select a secret to see who uses it, up to the app. Secrets are
 used through volumes, `env`/`envFrom` and image pull secrets; jobs belong
 to their CronJob / KEDA ScaledJob by name.
 
-The **rail** is a time line of the change log. It starts under the k7s
+The **rail** is a time line of the change log. It starts under the kfs
 badge, runs down the left edge of the sections (which sit one column to its
 right), turns at the divider (`╰`) and runs along it to the right edge:
 top-left is now, the far right end is `rail.minutes` ago (config, default
@@ -156,7 +161,7 @@ shown, in time order. Each line starts with the time and a tag (up to three
 letters) for the kind it is about: kubectl's short name where it has a short
 one (`po` pods, `rs` replicasets, `pvc` claims, `pv` volumes, `svc` services,
 `cm` configmaps, `ks`/`hr`
-Flux), else k7s' own (`dp` deployments, `se` secrets, `ir` ingress routes, `ap` Argo CD apps). Kubernetes events get the
+Flux), else kfs' own (`dp` deployments, `se` secrets, `ir` ingress routes, `ap` Argo CD apps). Kubernetes events get the
 tag of the object they are about; events about other kinds (Jobs, …) are
 `ev`.
 
@@ -178,8 +183,8 @@ It records:
   added and deleted, host, entry point, route and service changes
 - sync / health / revision changes of the responsible apps, and why an
   app is not green, one line each: the resources Argo CD / Flux list, plus
-  what k7s finds itself in what the app manages (Argo CD 3 no longer keeps
-  resource health in the Application). k7s looks for child apps that are
+  what kfs finds itself in what the app manages (Argo CD 3 no longer keeps
+  resource health in the Application). kfs looks for child apps that are
   not green, Deployments, StatefulSets, DaemonSets and Jobs that are not
   available, with their failing pods and why (CrashLoopBackOff, a missing
   secret, …), and claims that are not bound.
@@ -203,7 +208,7 @@ The navigation bar shows the menus with their key letter in cyan:
 | `Shift` + section key | sort that section by its columns: a small arrow marks the column in order (it starts at NAME ↑); each press steps that column ↓, then the next column ↑, then ↓, cycling back to NAME ↑ |
 | `↑↓`, `0-9` | move; jump to row `#` of the current section |
 | `tab` / `shift+tab` | jump to the first row of the next / previous section, round and round |
-| mouse wheel / trackpad | over the sections: move the selection; over the change log: scroll it; on a screen (logs, describe, pickers): like `↑↓`. k7s takes the mouse for this, so select text with `Shift` (`Option` in macOS Terminal and iTerm2) |
+| mouse wheel / trackpad | over the sections: move the selection; over the change log: scroll it; on a screen (logs, describe, pickers): like `↑↓`. kfs takes the mouse for this, so select text with `Shift` (`Option` in macOS Terminal and iTerm2) |
 | `d` | on any row: **d**escribe it, the same text as `kubectl describe` (from kubectl's own describe code) |
 | `l` / `h` / `w` | on a pod: **l**ogs, s**h**ell, for**w**ard a port (again: stop) |
 | `enter` | on a pod: logs; on a secret: open it |
@@ -247,16 +252,16 @@ local port when free). Pods with several containers or ports get a picker.
 
 ## Config
 
-`~/.config/k7s/config.yaml` (or `$XDG_CONFIG_HOME/k7s/config.yaml`, or
+`~/.config/kfs/config.yaml` (or `$XDG_CONFIG_HOME/kfs/config.yaml`, or
 `--config <file>`) keeps the colors, the order of the sections
 (`resource_order`, top to bottom, e.g. `[pods, gitops]` for pods on top;
 sections not listed follow in the default order), the commands and their keys,
-and the state k7s comes back to: hidden sections, hidden row states, the last
+and the state kfs comes back to: hidden sections, hidden row states, the last
 namespace per context (used without `-n`).
 
 The defaults are [`internal/config/default.yaml`](internal/config/default.yaml),
-compiled into k7s. Change a default there, not in Go. On the first start k7s
-writes that file, comments and all, as your config. After that k7s rewrites
+compiled into kfs. Change a default there, not in Go. On the first start kfs
+writes that file, comments and all, as your config. After that kfs rewrites
 the file whenever you toggle a section or state or switch namespace, so
 comments do not survive.
 
@@ -304,14 +309,14 @@ A section missing from `commands` gets its defaults. Page keys (`c n f`, the
 section keys, `q a Q A`, `j k G`, digits, `esc`) win over commands.
 
 Keys missing from your file take their defaults. `version` is the file format:
-older files are migrated, and a file from a newer k7s is used as far as
+older files are migrated, and a file from a newer kfs is used as far as
 understood but never overwritten. The version is bumped whenever a key is
-added, because an older k7s would otherwise drop the new key when saving.
+added, because an older kfs would otherwise drop the new key when saving.
 
 ## Code layout
 
 ```
-cmd/                       CLI: k7s [-n] [-l] [--once] [--config]
+cmd/                       CLI: kfs [-n] [-l] [--once] [--config]
 internal/config/           the YAML config: section order, commands, colors, hidden
   default.yaml             sections and states, last namespaces; the defaults (compiled in)
 internal/kube/             cluster access: clients, contexts, a generic watch,
@@ -354,7 +359,7 @@ default. Its steps (Picker, Viewer, Exec) are drawn by the tui.
 ## Build
 
 ```bash
-go build -o bin/k7s .
+go build -o bin/kfs .
 ```
 
 Behind a TLS-inspecting corporate proxy, Go must trust the proxy's root CA to
@@ -365,7 +370,7 @@ point it at a bundle that includes the corporate root:
 
 ```bash
 cat /etc/ssl/cert.pem corporate-root.pem > ~/.certs/ca-bundle.pem
-SSL_CERT_FILE=~/.certs/ca-bundle.pem go build -o bin/k7s .
+SSL_CERT_FILE=~/.certs/ca-bundle.pem go build -o bin/kfs .
 ```
 
 ## Release

@@ -8,12 +8,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/fu/k7s/internal/kube"
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/kube"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // The port-forwards of pods: they run in the background until stopped or
-// k7s quits, show on their pod's row (⇄:port) and in the change log. The
+// kfs quits, show on their pod's row (⇄:port) and in the change log. The
 // forward command (commands/forward.go) starts and stops them.
 
 type (

@@ -3,7 +3,7 @@ package commands
 import (
 	"context"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // Describe is "kubectl describe" of the row's object: kubectl's own

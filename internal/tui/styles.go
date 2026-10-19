@@ -5,11 +5,11 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/fu/k7s/internal/config"
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/config"
+	"github.com/fu/kfs/internal/resources"
 )
 
-// Every color k7s uses, and the text helpers all screens draw with.
+// Every color kfs uses, and the text helpers all screens draw with.
 
 var (
 	header = lipgloss.NewStyle().Bold(true)

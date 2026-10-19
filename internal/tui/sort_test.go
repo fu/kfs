@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 func TestCompareCellsByValue(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/fu/k7s/internal/resources"
-	"github.com/fu/k7s/internal/resources/restest"
+	"github.com/fu/kfs/internal/resources"
+	"github.com/fu/kfs/internal/resources/restest"
 )
 
 func replicaSet(name, rev string, replicas int32) *appsv1.ReplicaSet {

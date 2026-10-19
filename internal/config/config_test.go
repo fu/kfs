@@ -10,7 +10,7 @@ import (
 func TestDefaultYAMLIsComplete(t *testing.T) {
 	d := Default()
 	if d.Version != Version {
-		t.Errorf("default.yaml is version %d, k7s writes %d", d.Version, Version)
+		t.Errorf("default.yaml is version %d, kfs writes %d", d.Version, Version)
 	}
 	// Every color must come from default.yaml: nothing else fills them.
 	for name, v := range map[string]string{
@@ -27,7 +27,7 @@ func TestDefaultYAMLIsComplete(t *testing.T) {
 }
 
 func TestMissingFileStartsAsDefaultYAML(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "k7s", "config.yaml")
+	path := filepath.Join(t.TempDir(), "kfs", "config.yaml")
 	c, err := Load(path)
 	if err != nil {
 		t.Fatal(err)
@@ -62,17 +62,17 @@ func TestStateRoundTrips(t *testing.T) {
 	}
 }
 
-func TestVersion1FileIsMigrated(t *testing.T) {
+func TestMissingKeysTakeDefaults(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	// Version 1 had no hide; this one also sets just one color.
-	os.WriteFile(path, []byte("version: 1\nsections:\n  hidden: [secrets]\ncolors:\n  linked: \"#123456\"\n"), 0o644)
+	// No hide, no version, just one color.
+	os.WriteFile(path, []byte("sections:\n  hidden: [secrets]\ncolors:\n  linked: \"#123456\"\n"), 0o644)
 	c, err := Load(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if c.Version != Version || !c.Hidden("secrets") || !c.StateHidden("pods", "completed") ||
 		c.Colors.Linked != "#123456" || c.Colors.Good != Defaults.Good {
-		t.Errorf("migrated: %+v", c)
+		t.Errorf("filled: %+v", c)
 	}
 }
 
@@ -80,7 +80,7 @@ func TestCommandKeys(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	// The user remaps shell, adds yaml everywhere, turns off describe for
 	// secrets (and so drops open), and says nothing about claims.
-	os.WriteFile(path, []byte(`version: 3
+	os.WriteFile(path, []byte(`version: 1
 commands:
   "*": {describe: d, yaml: y}
   pods: {shell: x, logs: l enter}
@@ -135,7 +135,7 @@ func TestResourceOrder(t *testing.T) {
 
 func TestEmptyHideIsKept(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	os.WriteFile(path, []byte("version: 2\nhide: {}\n"), 0o644)
+	os.WriteFile(path, []byte("version: 1\nhide: {}\n"), 0o644)
 	c, _ := Load(path)
 	if c.StateHidden("pods", "completed") {
 		t.Error("an empty hide means show everything, not the defaults")
@@ -161,15 +161,15 @@ func TestChangesPctRoundTrips(t *testing.T) {
 	}
 }
 
-func TestOldFileGetsLayoutDefault(t *testing.T) {
+func TestFileWithoutLayoutGetsItsDefault(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	os.WriteFile(path, []byte("version: 4\nsections:\n  hidden: [pods]\n"), 0o644)
+	os.WriteFile(path, []byte("version: 1\nsections:\n  hidden: [pods]\n"), 0o644)
 	c, err := Load(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := c.ChangesPct(); got != 33 {
-		t.Errorf("v4 file changes_pct = %d, want default 33", got)
+		t.Errorf("changes_pct = %d, want default 33", got)
 	}
 }
 

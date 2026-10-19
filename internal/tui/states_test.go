@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fu/k7s/internal/config"
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/config"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // podKind is a stateful kind with fixed rows.

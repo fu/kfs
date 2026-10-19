@@ -1,11 +1,11 @@
-# k7s config — the defaults, compiled into k7s.
+# kfs config — the defaults, compiled into kfs.
 #
-# k7s writes this file to ~/.config/k7s/config.yaml on the first start and
+# kfs writes this file to ~/.config/kfs/config.yaml on the first start and
 # then keeps it up to date (hidden sections and rows, last namespaces), so
-# comments do not survive there. Edit it while k7s is not running.
+# comments do not survive there. Edit it while kfs is not running.
 
-# The file format. k7s migrates older files and never overwrites a newer one.
-version: 6
+# The file format. kfs migrates older files and never overwrites a newer one.
+version: 1
 
 # The order of the sections, top to bottom (and in the menu). Sections not
 # listed follow in this order.
@@ -36,12 +36,12 @@ hide:
   replicasets: [old]
 
 # Where the divider sits between the sections and the change log, as the
-# change log's share of the space in percent (5–95). k7s updates this on the
+# change log's share of the space in percent (5–95). kfs updates this on the
 # fly when you press Q / A and restores it on the next start.
 layout:
   changes_pct: 33
 
-# The rail: a time line from the k7s badge down the left edge and along the
+# The rail: a time line from the kfs badge down the left edge and along the
 # divider to the right, showing the last `minutes`. The newest moment is at the
 # top; everything walks towards the end as time passes. A slot is grey when
 # something changed then (brighter the more), red when an alert came in (a
@@ -96,7 +96,7 @@ colors:
   busy: "#ffaf00"       # amber: on its way (pending, rolling out)
   warn: "#d7d700"       # yellow: worth a look (restarts, high usage)
   bad: "#d75f5f"        # red: failing
-  info: "#00afaf"       # cyan: accents, the k7s badge, the menus' keys
+  info: "#00afaf"       # cyan: accents, the kfs badge, the menus' keys
   flash: "#d7d700"      # background of a cell that just changed
   selected: "#3a3a3a"   # background of the selected row
   linked: "#005f5f"     # background of rows linked to the selected one

@@ -2,7 +2,7 @@
 // Deployment with its desired, current and ready replicas. Old revisions
 // (scaled to zero) are dimmed.
 //
-//	replicaset.go  a ReplicaSet as k7s sees it
+//	replicaset.go  a ReplicaSet as kfs sees it
 //	resource.go    watch, state, change log, links
 //	row.go         what a row shows
 package replicasets
@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/fu/k7s/internal/resources"
+	"github.com/fu/kfs/internal/resources"
 )
 
 // Row is the flattened view of a ReplicaSet.

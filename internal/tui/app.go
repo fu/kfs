@@ -1,4 +1,4 @@
-// Package tui draws k7s: one page for a namespace (and filter) with a
+// Package tui draws kfs: one page for a namespace (and filter) with a
 // section per kind and a change log underneath, the navigation bar, and the
 // screens every kind's steps open (pickers, viewers, interactive programs).
 //
@@ -17,21 +17,21 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
-	"github.com/fu/k7s/internal/config"
-	"github.com/fu/k7s/internal/kube"
-	"github.com/fu/k7s/internal/resources"
-	"github.com/fu/k7s/internal/resources/configmaps"
-	"github.com/fu/k7s/internal/resources/deployments"
-	"github.com/fu/k7s/internal/resources/gitops"
-	"github.com/fu/k7s/internal/resources/ingressroutes"
-	"github.com/fu/k7s/internal/resources/pods"
-	podcommands "github.com/fu/k7s/internal/resources/pods/commands"
-	"github.com/fu/k7s/internal/resources/pvcs"
-	"github.com/fu/k7s/internal/resources/pvs"
-	"github.com/fu/k7s/internal/resources/replicasets"
-	"github.com/fu/k7s/internal/resources/secrets"
-	secretcommands "github.com/fu/k7s/internal/resources/secrets/commands"
-	"github.com/fu/k7s/internal/resources/services"
+	"github.com/fu/kfs/internal/config"
+	"github.com/fu/kfs/internal/kube"
+	"github.com/fu/kfs/internal/resources"
+	"github.com/fu/kfs/internal/resources/configmaps"
+	"github.com/fu/kfs/internal/resources/deployments"
+	"github.com/fu/kfs/internal/resources/gitops"
+	"github.com/fu/kfs/internal/resources/ingressroutes"
+	"github.com/fu/kfs/internal/resources/pods"
+	podcommands "github.com/fu/kfs/internal/resources/pods/commands"
+	"github.com/fu/kfs/internal/resources/pvcs"
+	"github.com/fu/kfs/internal/resources/pvs"
+	"github.com/fu/kfs/internal/resources/replicasets"
+	"github.com/fu/kfs/internal/resources/secrets"
+	secretcommands "github.com/fu/kfs/internal/resources/secrets/commands"
+	"github.com/fu/kfs/internal/resources/services"
 )
 
 // registry lists the kinds in display order. Each name's first letter (or
@@ -120,7 +120,7 @@ func Run(ctx context.Context, flags *genericclioptions.ConfigFlags, client *kube
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// k7s picks its own colors: don't ask the terminal for its background
+	// kfs picks its own colors: don't ask the terminal for its background
 	// (a terminal that never answers would stall the start for seconds).
 	lipgloss.SetHasDarkBackground(true)
 	if info.Config == nil {
