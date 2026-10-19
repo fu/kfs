@@ -59,11 +59,15 @@ code { font-family: var(--mono); font-size: 0.88em; color: var(--fg); }
   border-bottom: 1px solid var(--rule);
 }
 
+/* The logo is drawn with / \ _ : in Fira Mono its slashes fill the line
+   height and nearly the whole cell, so with this line height and spacing the
+   strokes of one line meet those of the next. */
 .logo {
-  font-family: var(--mono);
+  font-family: "Fira Mono", var(--mono);
   color: var(--cyan-hi);
-  font-size: 18px;
-  line-height: 1.15;
+  font-size: 22px;
+  line-height: 0.91;
+  letter-spacing: -0.1em;
   margin: 0 0 40px;
   overflow-x: auto;
 }
@@ -290,7 +294,7 @@ footer {
 @media (max-width: 575px) {
   body { font-size: 16px; padding-left: 22px; }
   #rail { left: 6px; }
-  .logo { font-size: 13px; }
+  .logo { font-size: 16px; }
   .features { grid-template-columns: 1fr; }
   h2 { font-size: 24px; }
   .term { font-size: 12.5px; }
