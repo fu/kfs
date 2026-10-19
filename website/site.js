@@ -1,11 +1,11 @@
 // The rail down the left edge, the way kfs draws it: grey packets that swell
 // and fade (". : | | : .") with gaps between, flowing down one step at a
-// time, and now and then a cyan change travelling with them.
+// time, and now and then a cyan change travelling with them. ASCII only.
 (function () {
   const rail = document.getElementById("rail");
   const flow = 300;               // ms per step, as in kfs
   const block = 12, packet = 9;   // a block of 12 steps holds one packet of up to 9
-  const glyph = [" ", ".", ":", "│"];
+  const glyph = [" ", ".", ":", "|"];
 
   // splitmix-style hash: the same block always draws the same packet.
   function hash(n) {
@@ -24,33 +24,30 @@
     return j >= len ? 0 : Math.min(j + 1, len - j, peak);
   }
 
-  // changes: steps at which a cyan mark was born; it fades as it travels
-  const changes = new Set();
+  const changes = new Set(); // steps at which a cyan change was born
 
   function draw() {
-    const rows = Math.ceil(window.innerHeight / 20) + 1;
+    const line = parseFloat(getComputedStyle(rail).lineHeight) || 18;
+    const rows = Math.ceil(window.innerHeight / line) + 1;
     const now = Math.floor(Date.now() / flow);
     if (Math.random() < 0.08) changes.add(now);
-    let html = "";
+    let out = "";
     for (let i = 0; i < rows; i++) {
       const t = now - i;
       if (changes.has(t)) {
         const fresh = i < rows / 3;
-        html += `<span class="${fresh ? "c" : "c2"}">${fresh ? "┃" : ":"}</span>\n`;
+        out += `<span class="${fresh ? "c" : "c2"}">${fresh ? "|" : ":"}</span>\n`;
       } else {
-        html += glyph[height(t)] + "\n";
+        out += glyph[height(t)] + "\n";
       }
     }
     for (const t of changes) if (t < now - rows) changes.delete(t);
-    rail.innerHTML = html;
+    rail.innerHTML = out;
   }
 
-  if (rail && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    draw();
-    setInterval(draw, flow);
-  } else if (rail) {
-    draw();
-  }
+  if (!rail) return;
+  draw();
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setInterval(draw, flow);
 })();
 
 // Copy buttons next to the install commands.

@@ -1,40 +1,35 @@
-/* kfs: black, pixel type, the terminal's own colors. */
+/* kfs: black, IBM Plex Sans for reading, JetBrains Mono for
+   headlines and wherever the terminal speaks (commands, keys, the screen,
+   the rail); ASCII only in the terminal bits. */
 
 :root {
   --bg: #000;
-  --fg: #c6c6c6;
-  --dim: #6c6c6c;
-  --grey: #3a3a3a;
+  --fg: #e8e6e1;
+  --body: #b9b6ae;
+  --dim: #6f6c66;
+  --rule: #26241f;
   --cyan: #00afaf;
   --cyan-hi: #00e5ff;
-  --green: #5fd700;
-  --amber: #ffaf00;
-  --red: #ff3b3b;
-  --px: 4px; /* one "pixel" of the borders */
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 * { box-sizing: border-box; }
 
-html, body {
-  background: var(--bg);
-  color: var(--fg);
-  margin: 0;
-}
+html, body { background: var(--bg); margin: 0; }
 
 body {
-  font-family: "VT323", ui-monospace, monospace;
-  font-size: 24px;
-  line-height: 1.25;
+  color: var(--body);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.65;
   padding-left: 28px; /* room for the rail */
-  -webkit-font-smoothing: none;
-  font-smooth: never;
 }
 
-a { color: var(--cyan-hi); text-decoration: none; border-bottom: 2px solid var(--cyan); }
-a:hover { background: var(--cyan); color: var(--bg); }
+a { color: var(--fg); text-decoration: underline; text-decoration-color: var(--cyan); text-underline-offset: 4px; }
+a:hover { color: var(--cyan-hi); }
 
-code, kbd, pre { font-family: "VT323", ui-monospace, monospace; }
-code { color: var(--cyan-hi); font-size: 1em; }
+code { font-family: var(--mono); font-size: 0.88em; color: var(--fg); }
 
 ::selection { background: var(--cyan); color: var(--bg); }
 
@@ -42,13 +37,13 @@ code { color: var(--cyan-hi); font-size: 1em; }
 
 #rail {
   position: fixed;
-  top: 0; left: 8px; bottom: 0;
-  width: 14px;
-  font-family: "VT323", monospace;
-  font-size: 20px;
-  line-height: 20px;
+  top: 0; left: 10px; bottom: 0;
+  width: 12px;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 18px;
   white-space: pre;
-  color: #5a5a5a;
+  color: #4a4843;
   overflow: hidden;
   user-select: none;
   pointer-events: none;
@@ -58,77 +53,116 @@ code { color: var(--cyan-hi); font-size: 1em; }
 
 /* ---- header --------------------------------------------------------------- */
 
-.masthead { padding: 48px 0 32px; }
+.masthead {
+  padding: 64px 0 56px;
+  margin-bottom: 56px;
+  border-bottom: 1px solid var(--rule);
+}
 
 /* The logo is drawn with / \ _ : in Fira Mono its slashes fill the line
    height and nearly the whole cell, so with this line height and spacing the
    strokes of one line meet those of the next. */
 .logo {
-  font-family: "Fira Mono", monospace;
-  letter-spacing: -0.1em;
-  color: var(--cyan);
-  font-size: 21px;
+  font-family: "Fira Mono", var(--mono);
+  color: var(--cyan-hi);
+  font-size: 22px;
   line-height: 0.91;
-  margin: 0 0 24px;
+  letter-spacing: -0.1em;
+  margin: 0 0 40px;
   overflow-x: auto;
 }
 
-.tagline {
-  font-family: "Press Start 2P", monospace;
-  font-size: 15px;
-  line-height: 2;
-  margin: 0;
-  max-width: 46em;
+h1 {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: clamp(34px, 5.2vw, 68px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  color: var(--fg);
+  margin: 0 0 24px;
 }
-.tagline code { font-family: inherit; }
+h1 em { font-style: normal; color: var(--cyan-hi); }
+
+.lede {
+  font-size: 22px;
+  line-height: 1.45;
+  color: var(--body);
+  margin: 0 0 36px;
+  max-width: 34em;
+}
+.lede code { font-size: 0.92em; color: var(--cyan-hi); }
+
+/* the one-line install under the headline: a small terminal window */
+.quick {
+  max-width: 36em;
+  border: 1px solid #3a3833;
+  background: #0b0b0a;
+}
+.quick-bar {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+  padding: 6px 14px;
+  border-bottom: 1px solid #3a3833;
+}
+.quick-bar span:first-child { color: var(--body); }
+.quick-bar span:first-child::before { content: "* "; color: var(--cyan-hi); }
+.quick .cmd { border: 0; max-width: none; padding: 14px 12px 14px 16px; }
+.quick .cmd code { font-size: 16px; }
+.quick .cmd code::before { color: var(--cyan-hi); }
+.quick-alt { font-size: 14px; color: var(--dim); margin: 12px 0 0; }
+.quick-alt code { color: var(--body); }
 
 /* ---- sections ------------------------------------------------------------- */
 
-section { margin-bottom: 44px; }
+section { margin-bottom: 64px; }
 
 h2 {
-  font-family: "Press Start 2P", monospace;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
   color: var(--fg);
-  margin: 0 0 18px;
-  padding-bottom: 10px;
-  border-bottom: var(--px) dashed var(--grey);
+  margin: 0 0 22px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+h2 .no {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--cyan);
+  letter-spacing: 0.08em;
 }
 
 h3 {
-  font-family: "Press Start 2P", monospace;
-  font-size: 11px;
-  line-height: 1.8;
-  color: var(--dim);
-  margin: 0 0 8px;
-  text-transform: uppercase;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--fg);
+  margin: 0 0 10px;
 }
+h3 span { color: var(--dim); font-weight: 400; margin-left: 8px; }
 
-/* the change log's kind tag in front of a heading */
-.tag {
-  display: inline-block;
-  min-width: 4.2em;
-  color: var(--bg);
-  background: var(--cyan);
-  padding: 4px 6px;
-  margin-right: 10px;
-  text-transform: lowercase;
+p { margin: 0 0 16px; max-width: 36em; }
+
+/* ---- features ------------------------------------------------------------- */
+
+.features { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 28px 36px; }
+.features div { border-top: 1px solid var(--rule); padding-top: 14px; }
+.features dt {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.3;
+  color: var(--fg);
+  margin-bottom: 6px;
 }
-
-p { margin: 0 0 14px; }
-
-/* ---- feature list as change-log lines ------------------------------------ */
-
-.log { list-style: none; margin: 0; padding: 0; }
-.log li { display: flex; gap: 14px; padding: 2px 0; }
-.log .t { color: var(--dim); flex: none; }
-.log .k { flex: none; width: 6em; }
-.log .add { color: var(--green); }
-.log .mod { color: var(--cyan-hi); }
-.log .warn { color: var(--amber); }
-.log code { white-space: nowrap; }
+.features dd { margin: 0; font-size: 15px; }
+.features code { white-space: nowrap; }
 
 /* ---- install steps ---------------------------------------------------- */
 
@@ -136,27 +170,16 @@ p { margin: 0 0 14px; }
 .steps > li {
   counter-increment: step;
   position: relative;
-  padding: 0 0 22px 56px;
+  padding: 0 0 28px 52px;
 }
 .steps > li::before {
   content: counter(step);
   position: absolute; left: 0; top: -2px;
-  width: 36px; height: 36px;
-  display: grid; place-items: center;
-  font-family: "Press Start 2P", monospace;
-  font-size: 13px;
-  color: var(--bg);
-  background: var(--fg);
-  /* stepped pixel corners */
-  clip-path: polygon(0 var(--px), var(--px) var(--px), var(--px) 0, calc(100% - var(--px)) 0,
-    calc(100% - var(--px)) var(--px), 100% var(--px), 100% calc(100% - var(--px)),
-    calc(100% - var(--px)) calc(100% - var(--px)), calc(100% - var(--px)) 100%,
-    var(--px) 100%, var(--px) calc(100% - var(--px)), 0 calc(100% - var(--px)));
-}
-.steps > li:not(:last-child)::after { /* the dotted line from step to step */
-  content: "";
-  position: absolute; left: 16px; top: 40px; bottom: 4px;
-  border-left: var(--px) dotted var(--grey);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--cyan-hi);
 }
 
 .cmd {
@@ -164,93 +187,91 @@ p { margin: 0 0 14px; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border: var(--px) solid var(--grey);
-  padding: 6px 6px 6px 14px;
-  max-width: 34em;
+  border: 1px solid #3a3833;
+  background: #0b0b0a;
+  padding: 10px 10px 10px 16px;
+  max-width: 32em;
 }
+.cmd code { font-size: 15px; white-space: nowrap; overflow-x: auto; min-width: 0; }
 .cmd code::before { content: "$ "; color: var(--dim); }
-.cmd code { color: var(--fg); white-space: nowrap; overflow-x: auto; min-width: 0; }
 
 .copy {
-  font-family: "Press Start 2P", monospace;
-  font-size: 10px;
-  color: var(--bg);
-  background: var(--cyan);
-  border: 0;
-  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--body);
+  background: transparent;
+  border: 1px solid #3a3833;
+  padding: 4px 10px;
   cursor: pointer;
   flex: none;
 }
-.copy:hover { background: var(--cyan-hi); }
-.copy.done { background: var(--green); }
+.copy::before { content: "["; color: var(--dim); }
+.copy::after { content: "]"; color: var(--dim); }
+.copy:hover { color: var(--cyan-hi); border-color: var(--cyan); }
+.copy.done { color: var(--bg); background: var(--cyan); border-color: var(--cyan); }
 
-.note { color: var(--dim); font-size: 21px; }
+.note { color: var(--dim); font-size: 15px; }
+.steps .sub { color: var(--dim); font-size: 14px; margin: 10px 0 0; }
 
-/* ---- usage, keys -------------------------------------------------------- */
+/* ---- terminal blocks: usage, keys ----------------------------------------- */
 
-.block {
+.term {
+  font-family: var(--mono);
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--fg);
   margin: 0;
-  padding: 14px 16px;
-  border-left: var(--px) solid var(--cyan);
-  background: #0a0a0a;
+  padding: 18px 20px;
+  background: #0b0b0a;
+  border-left: 2px solid var(--cyan);
   overflow-x: auto;
 }
 .dim { color: var(--dim); }
 
-.keys { border-collapse: collapse; }
-.keys td { padding: 4px 18px 4px 0; vertical-align: top; }
-.keys td:first-child { white-space: nowrap; }
-kbd {
-  display: inline-block;
-  min-width: 1.4em;
-  text-align: center;
-  padding: 0 6px;
-  color: var(--bg);
-  background: var(--fg);
-  font-size: 0.9em;
-  box-shadow: 0 var(--px) 0 var(--dim);
-  margin-bottom: var(--px);
-}
-
 /* ---- the screen on the right ------------------------------------------ */
 
-.screen-wrap { position: sticky; top: 32px; }
+.screen-wrap { position: sticky; top: 40px; }
 
 .screen {
   margin: 0;
-  border: var(--px) solid var(--fg);
-  box-shadow: calc(var(--px) * 3) calc(var(--px) * 3) 0 var(--grey);
+  border: 1px solid #3a3833;
   background: #050505;
-  position: relative;
 }
 .screen figcaption {
-  font-family: "Press Start 2P", monospace;
-  font-size: 11px;
-  color: var(--bg);
-  background: var(--fg);
-  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--body);
+  padding: 8px 14px;
+  border-bottom: 1px solid #3a3833;
 }
-.screen video {
-  display: block;
-  width: 100%;
-  image-rendering: pixelated;
-  background: #000;
-}
+.screen figcaption span:first-child::before { content: "$ "; color: var(--dim); }
+.screen figcaption .dim::before { content: "* "; color: var(--cyan-hi); }
+.screen video { display: block; width: 100%; background: #000; }
 .screen video.missing { display: none; }
 
-.placeholder { display: none; padding: 20px 18px 28px; }
+.placeholder { display: none; padding: 24px 22px 28px; }
 .placeholder.on { display: block; }
 .placeholder pre {
-  margin: 0 0 18px;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.55;
   color: var(--dim);
-  font-size: 20px;
-  line-height: 1.15;
+  margin: 0 0 22px;
   overflow-x: auto;
 }
-.placeholder p { font-family: "Press Start 2P", monospace; font-size: 12px; color: var(--cyan-hi); margin: 0; }
-
-.blink { animation: blink 1s steps(1) infinite; }
+.placeholder p {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--fg);
+  margin: 0;
+}
+.cursor { font-family: var(--mono); font-style: normal; color: var(--cyan-hi); animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
+
+.caption { font-size: 14px; color: var(--dim); margin-top: 14px; }
 
 /* ---- footer ----------------------------------------------------------------- */
 
@@ -259,26 +280,28 @@ footer {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 40px 0 32px;
-  padding-top: 16px;
-  border-top: var(--px) dashed var(--grey);
+  margin: 24px 0 40px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  font-size: 14px;
   color: var(--dim);
-  font-size: 20px;
 }
 
 @media (max-width: 991px) {
   .screen-wrap { position: static; }
-  .tagline { font-size: 12px; }
 }
 
 @media (max-width: 575px) {
-  body { font-size: 21px; }
-  .logo { font-size: 15px; }
-  .log li { flex-wrap: wrap; gap: 0 12px; padding: 4px 0; }
-  .log .d { flex-basis: 100%; }
-  .steps > li { padding-left: 48px; }
+  body { font-size: 16px; padding-left: 22px; }
+  #rail { left: 6px; }
+  .logo { font-size: 16px; }
+  .features { grid-template-columns: 1fr; }
+  h2 { font-size: 24px; }
+  .term { font-size: 12.5px; }
+  .cmd code { white-space: normal; word-break: break-all; }
+  .steps > li { padding-left: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .blink { animation: none; }
+  .cursor { animation: none; }
 }
