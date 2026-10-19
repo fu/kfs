@@ -141,7 +141,9 @@ finer: an alert that fills one slot on a small screen may fill two on a large
 one. A slot is a dim dotted line (`┆ ┄`) while nothing happened in its time,
 grey (`│ ─`) when something changed, bright (`┃ ━`) when a lot did, and red
 when a warning or a failing state came in. It counts what the change log
-shows, so the filter applies to it too.
+shows, so the filter applies to it too. The rail also follows the selection:
+an arrow (`▶`) where it passes the selected row, and a bulb (`●`) breathing
+with the "watching" dot by every row linked to it.
 
 The status line has one **gitops light**: the worst of the responsible apps
 and their parents, so green pods under a broken deployment chain do not

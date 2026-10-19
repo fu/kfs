@@ -22,6 +22,15 @@ import (
 // railWidth is the column the rail takes left of the sections.
 const railWidth = 1
 
+// Where the rail passes the selected row it shows an arrow instead of time,
+// and by every row linked to it a bulb breathing with the "watching" dot.
+const (
+	railCursor = "▶"
+	railLinked = "●"
+)
+
+var railCursorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00e5ff")).Bold(true)
+
 // railBusy is how many changes in one slot make it bright.
 const railBusy = 3
 

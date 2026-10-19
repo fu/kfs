@@ -384,6 +384,7 @@ func (m *model) pageView() string {
 	// sections are drawn one column narrower: the rail runs left of them.
 	pw := m.width - railWidth
 	var lines []string
+	marks := map[int]string{} // line → what the rail shows there instead of time
 	selLine := 0
 	for _, k := range m.sections() {
 		rows := m.rows(k)
@@ -408,6 +409,16 @@ func (m *model) pageView() string {
 		}
 		hdr, body := table{cols: m.sortCols(k), rows: rows, number: true, linked: links}.lines(sel, pw)
 		lines = append(lines, hdr)
+		// The rail points at the selected row and lights a bulb on every row
+		// linked to it (not on sub-rows: their row has the bulb).
+		for i, r := range rows {
+			switch {
+			case k.Name() == selName && r.Key == selKey:
+				marks[len(lines)+i] = railCursor
+			case r.Sub == "" && links[r.Ref]:
+				marks[len(lines)+i] = railLinked
+			}
+		}
 		lines = append(lines, body...)
 	}
 	if len(lines) == 0 {
@@ -431,9 +442,18 @@ func (m *model) pageView() string {
 	var b strings.Builder
 	b.WriteString(m.statusLine())
 	b.WriteString("\n" + rv.down[0] + "\n")
+	bulb := m.pulse()
 	for i := 0; i < l.body; i++ {
-		b.WriteString(rv.down[1+i])
-		if idx := m.page.offset + i; idx < len(lines) {
+		idx := m.page.offset + i
+		switch marks[idx] {
+		case railCursor:
+			b.WriteString(railCursorStyle.Render(railCursor))
+		case railLinked:
+			b.WriteString(bulb)
+		default:
+			b.WriteString(rv.down[1+i])
+		}
+		if idx < len(lines) {
 			b.WriteString(lines[idx])
 		}
 		b.WriteByte('\n')
@@ -459,6 +479,7 @@ func (m *model) pageView() string {
 
 // pulse is a dot that breathes once per metrics refresh: brightest the moment
 // fresh metrics arrive, darkest halfway to the next refresh.
+// It is also the bulb on the rail by every row linked to the selected one.
 func (m *model) pulse() string {
 	period := m.info.Refresh.Seconds()
 	since := time.Since(m.pulseAt).Seconds()
