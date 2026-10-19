@@ -138,9 +138,11 @@ top-left is now, the far right end is `rail.minutes` ago (config, default
 for, each slot covering an equal share of that time — so what happened walks
 one slot further every minutes/slots, and a bigger window shows the same time
 finer: an alert that fills one slot on a small screen may fill two on a large
-one. A slot is a dim dotted line (`┆ ┄`) while nothing happened in its time,
-grey (`│ ─`) when something changed, bright (`┃ ━`) when a lot did, and red
-when a warning or a failing state came in. It counts what the change log
+one. A slot where something changed is cyan (red for a warning or a failing
+state) and fades as it travels: solid near now, then thinner, then dotted
+(`┃ │ : .` down, `━ ─ ┄ ·` along); a busy slot stays a step brighter. Where
+nothing happened the rail is a plain grey line with a faint random pattern
+(`╎ ┆`, a lighter grey) that belongs to the time, so it walks along too. It counts what the change log
 shows, so the filter applies to it too. The rail also follows the selection:
 an arrow (`▶`) where it passes the selected row, and a bulb (`●`) breathing
 with the "watching" dot by every row linked to it.

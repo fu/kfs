@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestRailSlotsByAge(t *testing.T) {
@@ -55,6 +56,34 @@ func TestRailSkipsHiddenChanges(t *testing.T) {
 	r.mark(now, true, func() bool { return false })
 	if s := r.slots(5, now); s[0].changes != 0 || s[0].alert {
 		t.Errorf("a change not on the page is not on the rail: %+v", s[0])
+	}
+}
+
+// The background pattern belongs to the time: a slot's worth of time later,
+// every slot shows what the slot before it showed.
+func TestRailPatternWalks(t *testing.T) {
+	r := rail{window: 21 * time.Second} // 21 slots: one second each
+	now := time.Unix(1000, 0)
+	before := []rune(ansi.Strip(r.view(0, 20, now).along))
+	after := []rune(ansi.Strip(r.view(0, 20, now.Add(time.Second)).along))
+	if string(after[1:]) != string(before[:len(before)-1]) {
+		t.Errorf("pattern did not move on by one:\n%s\n%s", string(before), string(after))
+	}
+}
+
+// A change fades as it travels: solid near now, dotted near the far end.
+func TestRailChangesFade(t *testing.T) {
+	now := time.Now()
+	r := rail{window: 100 * time.Second}
+	r.mark(now, false, nil)
+	r.mark(now.Add(-98*time.Second), false, nil)
+	v := r.view(9, 90, now) // 100 slots
+	if got := ansi.Strip(v.down[0]); got != "┃" {
+		t.Errorf("fresh change: %q", got)
+	}
+	along := []rune(ansi.Strip(v.along))
+	if got := string(along[len(along)-2]); got != "·" {
+		t.Errorf("old change: %q", got)
 	}
 }
 
