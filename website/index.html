@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>kfs — one namespace, everything in it, live</title>
+  <meta name="description" content="kfs shows one Kubernetes namespace on one page, live: GitOps apps, deployments, pods, services, secrets and a change log of everything that happens there.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-grid.min.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+  <!-- The rail, as in kfs: grey packets flowing down the left edge, a cyan change now and then. -->
+  <div id="rail" aria-hidden="true"></div>
+
+  <main class="container-xxl">
+    <header class="masthead">
+      <!-- LOGO: replace the placeholder below with the kfs ASCII art (keep the <pre>). -->
+      <pre id="logo" class="logo" aria-label="kfs">
++-------------------------+
+|                         |
+|   k f s   .   logo      |
+|   ascii art goes here   |
+|                         |
++-------------------------+</pre>
+      <p class="tagline">One namespace, everything in it, live.<br>
+        More than <code>kubectl</code>, less than <code>k9s</code> &mdash; all linked up.</p>
+    </header>
+
+    <div class="row gx-4 gx-lg-5 gy-4">
+      <!-- left: what it is, how to get it -->
+      <div class="col-lg-6">
+
+        <section>
+          <h2><span class="tag">po</span> what it is</h2>
+          <p>
+            kfs shows a namespace on one page that updates in place: the GitOps apps
+            that deploy it, its deployments, replicasets, pods with CPU and memory,
+            services, ingress routes, configmaps and secrets &mdash; and below them a
+            change log of everything that happens there, including what happened
+            before you started.
+          </p>
+          <p>
+            Select a row and everything linked to it lights up, across sections:
+            app &rarr; deployment &rarr; replicaset &rarr; pods &rarr; secrets,
+            configmaps, claims and volumes, and the services and ingress routes in
+            front of them.
+          </p>
+        </section>
+
+        <section>
+          <h2><span class="tag">ev</span> what you get</h2>
+          <ul class="log">
+            <li><span class="t">13:02:10</span><span class="k mod">MODIFIED</span><span class="d">one page per namespace, live, no sub commands</span></li>
+            <li><span class="t">13:02:11</span><span class="k add">ADDED</span><span class="d">GitOps apps (Argo CD, Flux) &mdash; and why one is not green</span></li>
+            <li><span class="t">13:02:12</span><span class="k add">ADDED</span><span class="d">a change log with the events from before you started</span></li>
+            <li><span class="t">13:02:13</span><span class="k add">ADDED</span><span class="d">links across sections: select a row, see what it touches</span></li>
+            <li><span class="t">13:02:14</span><span class="k add">ADDED</span><span class="d">logs, shell, port-forward, describe, yaml on any row</span></li>
+            <li><span class="t">13:02:15</span><span class="k warn">WARNING</span><span class="d">secret values never shown unless you ask</span></li>
+            <li><span class="t">13:02:16</span><span class="k mod">MODIFIED</span><span class="d">same flags as kubectl: <code>-n</code>, <code>--context</code>, <code>--kubeconfig</code>, exec auth</span></li>
+          </ul>
+        </section>
+
+        <section id="install">
+          <h2><span class="tag">rs</span> install</h2>
+
+          <ol class="steps">
+            <li>
+              <h3>macOS / Linux, with Homebrew</h3>
+              <div class="cmd"><code>brew install fu/tap/kfs</code><button class="copy" type="button">copy</button></div>
+            </li>
+            <li>
+              <h3>or with Go</h3>
+              <div class="cmd"><code>go install github.com/fu/kfs@latest</code><button class="copy" type="button">copy</button></div>
+            </li>
+            <li>
+              <h3>or a binary</h3>
+              <p>macOS, Linux and Windows builds on the
+                <a href="https://github.com/fu/kfs/releases">releases page</a>.
+                Unpack it and put <code>kfs</code> on your <code>PATH</code>.</p>
+            </li>
+            <li>
+              <h3>run it</h3>
+              <p>kfs uses your kubeconfig, exactly like kubectl. No setup.</p>
+              <div class="cmd"><code>kfs -n shop</code><button class="copy" type="button">copy</button></div>
+            </li>
+          </ol>
+
+          <p class="note">Coming from <code>k7s</code>? <code>brew uninstall k7s</code>, then
+            install kfs as above. The config now lives in <code>~/.config/kfs/</code>.</p>
+        </section>
+
+        <section>
+          <h2><span class="tag">svc</span> usage</h2>
+<pre class="block"><span class="dim">$</span> kfs                       <span class="dim"># the current namespace</span>
+<span class="dim">$</span> kfs -n shop               <span class="dim"># namespace shop</span>
+<span class="dim">$</span> kfs -n shop -l app=web    <span class="dim"># only one app in it</span>
+<span class="dim">$</span> kfs -n shop --once        <span class="dim"># print the sections once and exit</span></pre>
+        </section>
+
+        <section>
+          <h2><span class="tag">cm</span> keys</h2>
+          <table class="keys">
+            <tr><td><kbd>c</kbd> <kbd>n</kbd> <kbd>f</kbd></td><td>context, namespace, filter</td></tr>
+            <tr><td><kbd>tab</kbd></td><td>next section</td></tr>
+            <tr><td><kbd>↑</kbd> <kbd>↓</kbd> / wheel</td><td>move the selection</td></tr>
+            <tr><td><kbd>Shift</kbd>+section</td><td>sort by the next column</td></tr>
+            <tr><td><kbd>d</kbd></td><td>describe the row</td></tr>
+            <tr><td><kbd>l</kbd> <kbd>h</kbd> <kbd>w</kbd></td><td>logs, shell, port-forward (pods)</td></tr>
+            <tr><td><kbd>q</kbd> <kbd>a</kbd></td><td>scroll the change log</td></tr>
+            <tr><td><kbd>Q</kbd> <kbd>A</kbd></td><td>move the divider</td></tr>
+            <tr><td><kbd>esc</kbd></td><td>back, quit</td></tr>
+          </table>
+        </section>
+
+      </div>
+
+      <!-- right: kfs in action -->
+      <div class="col-lg-6">
+        <div class="screen-wrap">
+          <figure class="screen">
+            <figcaption>[ kfs -n shop ]</figcaption>
+            <!-- VIDEO: drop the recording at media/kfs.mp4 (and optionally media/kfs-poster.png). -->
+            <video id="demo" src="media/kfs.mp4" poster="media/kfs-poster.png" autoplay muted loop playsinline></video>
+            <div class="placeholder" id="demo-placeholder">
+              <pre>
+ ┆gitops
+ ▶1  ●  ●  web     shop  ● main-app
+ ⋮
+ │deployments
+ ●1  web   3/3   3   3  ●  web:1.4.2
+ .
+ ┆pods
+ ●1  web-7d4b9c6f5-x2k8q  1/1  ●  3m
+ ●2  web-7d4b9c6f5-pq9vz  1/1  ●  3m
+ :
+ ╰ changes (42) ━━━   ┄┄   ·   ━━ ───</pre>
+              <p class="blink">video goes here_</p>
+            </div>
+          </figure>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <span>kfs · Apache License 2.0</span>
+      <a href="https://github.com/fu/kfs">github.com/fu/kfs</a>
+    </footer>
+  </main>
+
+  <script src="site.js"></script>
+</body>
+</html>

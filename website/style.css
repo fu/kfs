@@ -1,0 +1,278 @@
+/* kfs: black, pixel type, the terminal's own colors. */
+
+:root {
+  --bg: #000;
+  --fg: #c6c6c6;
+  --dim: #6c6c6c;
+  --grey: #3a3a3a;
+  --cyan: #00afaf;
+  --cyan-hi: #00e5ff;
+  --green: #5fd700;
+  --amber: #ffaf00;
+  --red: #ff3b3b;
+  --px: 4px; /* one "pixel" of the borders */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  margin: 0;
+}
+
+body {
+  font-family: "VT323", ui-monospace, monospace;
+  font-size: 24px;
+  line-height: 1.25;
+  padding-left: 28px; /* room for the rail */
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+a { color: var(--cyan-hi); text-decoration: none; border-bottom: 2px solid var(--cyan); }
+a:hover { background: var(--cyan); color: var(--bg); }
+
+code, kbd, pre { font-family: "VT323", ui-monospace, monospace; }
+code { color: var(--cyan-hi); font-size: 1em; }
+
+::selection { background: var(--cyan); color: var(--bg); }
+
+/* ---- the rail ----------------------------------------------------------- */
+
+#rail {
+  position: fixed;
+  top: 0; left: 8px; bottom: 0;
+  width: 14px;
+  font-family: "VT323", monospace;
+  font-size: 20px;
+  line-height: 20px;
+  white-space: pre;
+  color: #5a5a5a;
+  overflow: hidden;
+  user-select: none;
+  pointer-events: none;
+}
+#rail .c { color: var(--cyan-hi); }
+#rail .c2 { color: #1a7f8e; }
+
+/* ---- header --------------------------------------------------------------- */
+
+.masthead { padding: 48px 0 32px; }
+
+.logo {
+  color: var(--cyan);
+  font-size: 22px;
+  line-height: 1;
+  margin: 0 0 24px;
+  overflow-x: auto;
+}
+
+.tagline {
+  font-family: "Press Start 2P", monospace;
+  font-size: 15px;
+  line-height: 2;
+  margin: 0;
+  max-width: 46em;
+}
+.tagline code { font-family: inherit; }
+
+/* ---- sections ------------------------------------------------------------- */
+
+section { margin-bottom: 44px; }
+
+h2 {
+  font-family: "Press Start 2P", monospace;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--fg);
+  margin: 0 0 18px;
+  padding-bottom: 10px;
+  border-bottom: var(--px) dashed var(--grey);
+}
+
+h3 {
+  font-family: "Press Start 2P", monospace;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--dim);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+/* the change log's kind tag in front of a heading */
+.tag {
+  display: inline-block;
+  min-width: 4.2em;
+  color: var(--bg);
+  background: var(--cyan);
+  padding: 4px 6px;
+  margin-right: 10px;
+  text-transform: lowercase;
+}
+
+p { margin: 0 0 14px; }
+
+/* ---- feature list as change-log lines ------------------------------------ */
+
+.log { list-style: none; margin: 0; padding: 0; }
+.log li { display: flex; gap: 14px; padding: 2px 0; }
+.log .t { color: var(--dim); flex: none; }
+.log .k { flex: none; width: 6em; }
+.log .add { color: var(--green); }
+.log .mod { color: var(--cyan-hi); }
+.log .warn { color: var(--amber); }
+.log code { white-space: nowrap; }
+
+/* ---- install steps ---------------------------------------------------- */
+
+.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding: 0 0 22px 56px;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute; left: 0; top: -2px;
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  font-family: "Press Start 2P", monospace;
+  font-size: 13px;
+  color: var(--bg);
+  background: var(--fg);
+  /* stepped pixel corners */
+  clip-path: polygon(0 var(--px), var(--px) var(--px), var(--px) 0, calc(100% - var(--px)) 0,
+    calc(100% - var(--px)) var(--px), 100% var(--px), 100% calc(100% - var(--px)),
+    calc(100% - var(--px)) calc(100% - var(--px)), calc(100% - var(--px)) 100%,
+    var(--px) 100%, var(--px) calc(100% - var(--px)), 0 calc(100% - var(--px)));
+}
+.steps > li:not(:last-child)::after { /* the dotted line from step to step */
+  content: "";
+  position: absolute; left: 16px; top: 40px; bottom: 4px;
+  border-left: var(--px) dotted var(--grey);
+}
+
+.cmd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: var(--px) solid var(--grey);
+  padding: 6px 6px 6px 14px;
+  max-width: 34em;
+}
+.cmd code::before { content: "$ "; color: var(--dim); }
+.cmd code { color: var(--fg); white-space: nowrap; overflow-x: auto; min-width: 0; }
+
+.copy {
+  font-family: "Press Start 2P", monospace;
+  font-size: 10px;
+  color: var(--bg);
+  background: var(--cyan);
+  border: 0;
+  padding: 8px 10px;
+  cursor: pointer;
+  flex: none;
+}
+.copy:hover { background: var(--cyan-hi); }
+.copy.done { background: var(--green); }
+
+.note { color: var(--dim); font-size: 21px; }
+
+/* ---- usage, keys -------------------------------------------------------- */
+
+.block {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: var(--px) solid var(--cyan);
+  background: #0a0a0a;
+  overflow-x: auto;
+}
+.dim { color: var(--dim); }
+
+.keys { border-collapse: collapse; }
+.keys td { padding: 4px 18px 4px 0; vertical-align: top; }
+.keys td:first-child { white-space: nowrap; }
+kbd {
+  display: inline-block;
+  min-width: 1.4em;
+  text-align: center;
+  padding: 0 6px;
+  color: var(--bg);
+  background: var(--fg);
+  font-size: 0.9em;
+  box-shadow: 0 var(--px) 0 var(--dim);
+  margin-bottom: var(--px);
+}
+
+/* ---- the screen on the right ------------------------------------------ */
+
+.screen-wrap { position: sticky; top: 32px; }
+
+.screen {
+  margin: 0;
+  border: var(--px) solid var(--fg);
+  box-shadow: calc(var(--px) * 3) calc(var(--px) * 3) 0 var(--grey);
+  background: #050505;
+  position: relative;
+}
+.screen figcaption {
+  font-family: "Press Start 2P", monospace;
+  font-size: 11px;
+  color: var(--bg);
+  background: var(--fg);
+  padding: 8px 12px;
+}
+.screen video {
+  display: block;
+  width: 100%;
+  image-rendering: pixelated;
+  background: #000;
+}
+.screen video.missing { display: none; }
+
+.placeholder { display: none; padding: 20px 18px 28px; }
+.placeholder.on { display: block; }
+.placeholder pre {
+  margin: 0 0 18px;
+  color: var(--dim);
+  font-size: 20px;
+  line-height: 1.15;
+  overflow-x: auto;
+}
+.placeholder p { font-family: "Press Start 2P", monospace; font-size: 12px; color: var(--cyan-hi); margin: 0; }
+
+.blink { animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---- footer ----------------------------------------------------------------- */
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 40px 0 32px;
+  padding-top: 16px;
+  border-top: var(--px) dashed var(--grey);
+  color: var(--dim);
+  font-size: 20px;
+}
+
+@media (max-width: 991px) {
+  .screen-wrap { position: static; }
+  .tagline { font-size: 12px; }
+}
+
+@media (max-width: 575px) {
+  body { font-size: 21px; }
+  .log li { flex-wrap: wrap; gap: 0 12px; padding: 4px 0; }
+  .log .d { flex-basis: 100%; }
+  .steps > li { padding-left: 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blink { animation: none; }
+}
