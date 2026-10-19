@@ -172,6 +172,64 @@ func (m *model) moveSelection(delta int) {
 	m.page.selected, m.page.moved = entries[clamp(i, delta, len(entries))], true
 }
 
+// moveSection moves the selection to the first row of the next (delta 1) or
+// previous (-1) section that has rows, cycling round.
+func (m *model) moveSection(delta int) {
+	var firsts []string // each section's first row
+	cur := 0
+	for _, k := range m.sections() {
+		ks := keys(m.rows(k))
+		if len(ks) == 0 {
+			continue
+		}
+		if name, _, _ := strings.Cut(m.page.selected, "/"); name == k.Name() {
+			cur = len(firsts)
+		}
+		firsts = append(firsts, k.Name()+"/"+ks[0])
+	}
+	if len(firsts) == 0 {
+		return
+	}
+	n := len(firsts)
+	m.page.selected, m.page.moved = firsts[((cur+delta)%n+n)%n], true
+}
+
+// wheel scrolls with the mouse wheel or trackpad: over the change log it
+// scrolls the log, elsewhere on the page it moves the selection; on a screen
+// it is the arrow keys.
+func (m *model) wheel(msg tea.MouseMsg) tea.Cmd {
+	up := msg.Button == tea.MouseButtonWheelUp
+	if !up && msg.Button != tea.MouseButtonWheelDown {
+		return nil
+	}
+	key := tea.KeyMsg{Type: tea.KeyDown}
+	if up {
+		key = tea.KeyMsg{Type: tea.KeyUp}
+	}
+	if top := m.top(); top != nil {
+		cmd, done := top.update(key)
+		if done {
+			m.close(top)
+		}
+		return cmd
+	}
+	// status line, the rail's first slot, the sections, the divider, the log
+	if l := m.layout(); msg.Y > 2+l.body {
+		if up {
+			m.changes.back++ // the pane clamps it
+		} else {
+			m.changes.back = max(0, m.changes.back-1)
+		}
+		return nil
+	}
+	if up {
+		m.moveSelection(-1)
+	} else {
+		m.moveSelection(1)
+	}
+	return nil
+}
+
 func (m *model) pageKey(msg tea.KeyMsg) tea.Cmd {
 	key := msg.String()
 	switch key {
@@ -234,6 +292,10 @@ func (m *model) pageKey(msg tea.KeyMsg) tea.Cmd {
 		m.moveSelection(-1)
 	case "down", "j":
 		m.moveSelection(1)
+	case "tab":
+		m.moveSection(1)
+	case "shift+tab":
+		m.moveSection(-1)
 	case "pgup":
 		m.moveSelection(-page)
 	case "pgdown":

@@ -202,6 +202,8 @@ The navigation bar shows the menus with their key letter in cyan:
 | `g` `e` `r` `p` `i` `u` `o` `m` `v` `s` | show or hide the **g**itops / d**e**ployments / **r**eplicasets / **p**ods / serv**i**ces / ingressro**u**tes / c**o**nfigmaps / clai**m**s / **v**olumes / **s**ecrets section |
 | `Shift` + section key | sort that section by its columns: a small arrow marks the column in order (it starts at NAME ↑); each press steps that column ↓, then the next column ↑, then ↓, cycling back to NAME ↑ |
 | `↑↓`, `0-9` | move; jump to row `#` of the current section |
+| `tab` / `shift+tab` | jump to the first row of the next / previous section, round and round |
+| mouse wheel / trackpad | over the sections: move the selection; over the change log: scroll it; on a screen (logs, describe, pickers): like `↑↓`. k7s takes the mouse for this, so select text with `Shift` (`Option` in macOS Terminal and iTerm2) |
 | `d` | on any row: **d**escribe it, the same text as `kubectl describe` (from kubectl's own describe code) |
 | `l` / `h` / `w` | on a pod: **l**ogs, s**h**ell, for**w**ard a port (again: stop) |
 | `enter` | on a pod: logs; on a secret: open it |

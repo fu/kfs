@@ -131,7 +131,9 @@ func Run(ctx context.Context, flags *genericclioptions.ConfigFlags, client *kube
 	m := &model{ctx: ctx, flags: flags, client: client, info: info, kinds: ordered(info.Config, registry()), started: map[string]bool{}}
 	m.page.cfg = info.Config
 	m.changes.rail.window = info.Config.RailWindow()
-	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithContext(ctx))
+	// Mouse reporting for the wheel / trackpad (select text with Shift, or
+	// Option in macOS Terminal and iTerm2).
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithContext(ctx))
 	m.send = p.Send
 	if info.Notice != "" {
 		m.Notice(info.Notice)
@@ -205,6 +207,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 		return m, m.pageKey(msg)
+	case tea.MouseMsg:
+		return m, m.wheel(msg)
 	case execDoneMsg:
 		if msg.err != nil {
 			m.Notice(msg.err.Error())
