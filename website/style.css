@@ -33,6 +33,15 @@ code { font-family: var(--mono); font-size: 0.88em; color: var(--fg); }
 
 ::selection { background: var(--cyan); color: var(--bg); }
 
+/* scrollbars: thin, the frames' grey on no track. scrollbar-color for
+   Firefox and Chrome, the -webkit- ones for Safari (cyan under the pointer). */
+* { scrollbar-width: thin; scrollbar-color: #3a3833 transparent; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3a3833; }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+::-webkit-scrollbar-corner { background: transparent; }
+
 /* ---- the rail ----------------------------------------------------------- */
 
 #rail {
@@ -199,7 +208,7 @@ p { margin: 0 0 16px; max-width: 36em; }
   padding: 10px 10px 10px 16px;
   max-width: 32em;
 }
-.cmd code { font-size: 15px; white-space: nowrap; overflow-x: auto; min-width: 0; }
+.cmd code { font-size: 15px; white-space: nowrap; overflow-x: auto; min-width: 0; padding-bottom: 4px; }
 .cmd code::before { content: "$ "; color: var(--dim); }
 
 .copy {
