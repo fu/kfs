@@ -18,7 +18,8 @@ import (
 // an alert burst that fills one slot on a small screen may fill two on a
 // large one.
 //
-// A slot where something changed is cyan, red when an alert came in, and it
+// A slot where something changed is cyan when all was fine, amber for a
+// warning, red for something failing (the worst change in it wins), and it
 // fades as it travels: bright and solid near now, then thinner, then dotted
 // (┃ │ : .) towards the far end; a busy slot stays one step brighter. Where
 // nothing happened the rail is grey packets that swell and fade, with gaps
@@ -54,12 +55,31 @@ var (
 	railAlong  = railGlyphs{fade: [4]string{"━", "─", "┄", "·"}, bg: [4]string{" ", "·", "╌", "─"}}
 )
 
-// The fade steps' colors, and the packets' greys by height.
+// The fade steps' colors by level, and the packets' greys by height.
 var (
-	railCyan = fadeStyles("#00e5ff", "#00afc8", "#1a7f8e", "#0f5560")
-	railRed  = fadeStyles("#ff3b3b", "#d23232", "#9e2a2a", "#6e2222")
-	railBg   = fadeStyles("#4e4e4e", "#444444", "#4e4e4e", "#5f5f5f")
+	railColors = map[railLevel][4]lipgloss.Style{
+		railGood:  fadeStyles("#00e5ff", "#00afc8", "#1a7f8e", "#0f5560"),
+		railWarn:  fadeStyles("#ffaf00", "#d79000", "#a06c00", "#6e4b00"),
+		railError: fadeStyles("#ff3b3b", "#d23232", "#9e2a2a", "#6e2222"),
+	}
+	railBg = fadeStyles("#4e4e4e", "#444444", "#4e4e4e", "#5f5f5f")
 )
+
+// railLevel is how a change reads on the rail; within a slot the highest
+// wins: red over amber over cyan.
+type railLevel int
+
+const (
+	railNone  railLevel = iota
+	railGood            // cyan: something happened, all fine
+	railWarn            // amber: a warning, something on its way
+	railError           // red: something failing
+)
+
+// railHistory is how far back the events kfs finds at start go (Kubernetes
+// keeps them about an hour). They are squeezed into the rail's window so it
+// starts full, then walk off at the normal pace.
+const railHistory = time.Hour
 
 // The grey packets: they flow down and along one slot every railFlow,
 // whatever the rail's time scale, cut into blocks of railBlock slots; a block
@@ -78,30 +98,40 @@ func fadeStyles(colors ...string) [4]lipgloss.Style {
 	return out
 }
 
-// railEvent is one change: when, whether it was an alert, and whether it
-// (still) belongs on the page, like its change-log entry.
+// railEvent is one change: when, how it reads, and whether it (still)
+// belongs on the page, like its change-log entry. at is where it sits on the
+// rail: for history, its squeezed time.
 type railEvent struct {
 	at    time.Time
-	alert bool
+	level railLevel
 	show  func() bool
 }
 
 type rail struct {
 	window time.Duration
+	start  time.Time // when the page started: history is what came before
 	events []railEvent
 }
 
-func (r *rail) reset() { r.events = nil }
+func (r *rail) reset(now time.Time) { r.events, r.start = nil, now }
 
-// mark records a change.
-func (r *rail) mark(at time.Time, alert bool, show func() bool) {
-	r.events = append(r.events, railEvent{at: at, alert: alert, show: show})
+// mark records a change. A change from before the page started is placed at
+// its age squeezed from railHistory into the window, so the history fills
+// the rail at start instead of falling off it.
+func (r *rail) mark(at time.Time, level railLevel, show func() bool) {
+	if !r.start.IsZero() && at.Before(r.start) {
+		if w := r.span(); w < railHistory {
+			at = r.start.Add(-time.Duration(float64(r.start.Sub(at)) * float64(w) / float64(railHistory)))
+		}
+	}
+	r.events = append(r.events, railEvent{at: at, level: level, show: show})
 }
 
-// railSlot is what happened in one slot's time.
+// railSlot is what happened in one slot's time: how many changes, and the
+// highest level among them.
 type railSlot struct {
 	changes int
-	alert   bool
+	level   railLevel
 }
 
 // slots cuts the window into n slots, slot 0 the newest, and forgets events
@@ -122,7 +152,7 @@ func (r *rail) slots(n int, now time.Time) []railSlot {
 		i := int(float64(max(0, age)) / float64(window) * float64(n))
 		i = min(i, n-1)
 		out[i].changes++
-		out[i].alert = out[i].alert || e.alert
+		out[i].level = max(out[i].level, e.level)
 	}
 	clear(r.events[len(keep):]) // let the dropped closures go
 	r.events = keep
@@ -170,10 +200,11 @@ func (r *rail) view(rows, along int, now time.Time) railView {
 	return v
 }
 
-// glyph draws slot i of n: a change in cyan (an alert in red), faded by how
-// far along the rail it is; else the background pattern of time bucket t.
+// glyph draws slot i of n: its changes in their level's color (red, amber,
+// cyan), faded by how far along the rail it is; else the background pattern
+// of time bucket t.
 func (s railSlot) glyph(g railGlyphs, i, n int, t int64) string {
-	if s.changes == 0 {
+	if s.changes == 0 || s.level == railNone {
 		p := railPattern(t)
 		return railBg[p].Render(g.bg[p])
 	}
@@ -181,10 +212,7 @@ func (s railSlot) glyph(g railGlyphs, i, n int, t int64) string {
 	if s.changes >= railBusy {
 		step = max(0, step-1)
 	}
-	if s.alert {
-		return railRed[step].Render(g.fade[step])
-	}
-	return railCyan[step].Render(g.fade[step])
+	return railColors[s.level][step].Render(g.fade[step])
 }
 
 // railPattern is the height (0 gap, 1 ".", 2 ":", 3 "│") of the grey packet

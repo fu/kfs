@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 
@@ -27,14 +28,14 @@ type changeLog struct {
 	cancel  context.CancelFunc
 }
 
-func (c *changeLog) reset() { c.entries, c.back = nil, 0; c.rail.reset() }
+func (c *changeLog) reset() { c.entries, c.back = nil, 0; c.rail.reset(time.Now()) }
 
 // add keeps entries in time order: events from before the watch started
-// carry their own, older timestamps. Every entry also lands on the rail, red
-// when it is an alert.
+// carry their own, older timestamps. Every entry also lands on the rail, in
+// the color of its level (history too, squeezed into the rail's window).
 func (c *changeLog) add(e resources.Change) {
 	c.entries = append(c.entries, e)
-	c.rail.mark(e.At, alert(e), e.Show)
+	c.rail.mark(e.At, level(e), e.Show)
 	if n := len(c.entries); n > 1 && c.entries[n-2].At.After(e.At) {
 		sort.SliceStable(c.entries, func(i, j int) bool { return c.entries[i].At.Before(c.entries[j].At) })
 	}
@@ -43,18 +44,23 @@ func (c *changeLog) add(e resources.Change) {
 	}
 }
 
-// alert reports whether a change is an alert: a warning event, or something
-// turning red (its state shown in a red tone).
-func alert(e resources.Change) bool {
+// level is how a change reads on the rail: red when something is failing
+// (its state in a red tone), amber for a warning event or something on its
+// way or worth a look (an amber or yellow state), else cyan.
+func level(e resources.Change) railLevel {
+	l := railGood
 	if e.Kind == resources.Warning {
-		return true
+		l = railWarn
 	}
 	for _, s := range e.State {
-		if s.Tone == resources.Alarm || s.Tone == resources.Bad {
-			return true
+		switch s.Tone {
+		case resources.Alarm, resources.Bad:
+			return railError
+		case resources.Busy, resources.Warn:
+			l = railWarn
 		}
 	}
-	return false
+	return l
 }
 
 // view renders the newest entries that belong on the page in n lines; back

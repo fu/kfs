@@ -151,9 +151,14 @@ top-left is now, the far right end is `rail.minutes` ago (config, default
 for, each slot covering an equal share of that time — so what happened walks
 one slot further every minutes/slots, and a bigger window shows the same time
 finer: an alert that fills one slot on a small screen may fill two on a large
-one. A slot where something changed is cyan (red for a warning or a failing
-state) and fades as it travels: solid near now, then thinner, then dotted
-(`┃ │ : .` down, `━ ─ ┄ ·` along); a busy slot stays a step brighter. Where
+one. A slot where something changed is red when something failed (a state
+in red: a crashing pod, a stuck rollout), amber for a warning (a Warning
+event, something pending or progressing), and cyan when all was fine; with
+several changes in one slot the worst wins. It fades as it travels: solid
+near now, then thinner, then dotted (`┃ │ : .` down, `━ ─ ┄ ·` along); a busy
+slot stays a step brighter. At start the rail is filled from the events
+Kubernetes still keeps (about the last hour), squeezed into its window so
+the oldest sit at the far end; they walk off as time goes on. Where
 nothing happened the rail is grey packets that swell and fade with gaps
 between them (`. : │ │ : .   . : .`), flowing on a steady beat of their own:
 a new piece appears right under the badge every 300 ms and the rest move on. It counts what the change log
