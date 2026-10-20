@@ -16,6 +16,8 @@ import (
 
 // Resource is the pods kind.
 type Resource struct {
+	resources.Own // logs, shell, forward, … (pods/commands)
+
 	host   resources.Host
 	gen    int
 	cancel context.CancelFunc
@@ -33,7 +35,10 @@ type Resource struct {
 	forwards map[string]*forward
 }
 
-func New() *Resource { return &Resource{forwards: map[string]*forward{}} }
+// New is the pods kind with its own commands (pods/commands.All()).
+func New(own ...resources.Command) *Resource {
+	return &Resource{Own: own, forwards: map[string]*forward{}}
+}
 
 const keepDeleted = 8 * time.Second // how long a deleted pod lingers (struck through)
 

@@ -16,6 +16,19 @@ type Command struct {
 	Enabled func(t Target) bool
 }
 
+// Commander is a kind whose rows have commands of their own (logs, shell,
+// …), next to those every kind's rows have (resources/commands: describe,
+// yaml, copy). A kind embeds Own and is given them in its New: its commands
+// folder imports the kind, so the kind cannot import them.
+type Commander interface {
+	Commands() []Command
+}
+
+// Own are a kind's own commands; embedding it makes the kind a Commander.
+type Own []Command
+
+func (o Own) Commands() []Command { return o }
+
 // Target is the row a command runs on.
 type Target struct {
 	Host Host

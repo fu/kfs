@@ -17,7 +17,8 @@
   <div id="rail" aria-hidden="true"></div>
 
   <main class="container-xxl">
-    <header class="masthead">
+    <header class="masthead row gx-4 gx-lg-5 gy-5">
+      <div class="brand col-lg-7">
       <pre id="logo" class="logo" role="img" aria-label="kfs">
  _________.       _________.
  \__     /_______/    ____/_______.
@@ -28,12 +29,15 @@ _/     .      \/     /   \      \
            \______/</pre>
       <h1>One namespace,<br><em>everything in it,</em> live.</h1>
       <p class="lede"><code>kubectl get -w</code> on steroids:<br>a whole namespace, live, and all of it linked up.</p>
+      </div>
 
+      <div class="get col-lg-5">
       <div class="quick">
         <div class="quick-bar"><span>install</span><span>macOS &middot; Linux</span></div>
         <div class="cmd"><code>curl -fsSL https://getkfs.org/install.sh | sh</code><button class="copy" type="button">copy</button></div>
       </div>
       <p class="quick-alt">or <code>brew install fu/tap/kfs</code> &middot; <a href="#install">other ways</a></p>
+      </div>
     </header>
 
     <div class="row gx-4 gx-lg-5 gy-5">

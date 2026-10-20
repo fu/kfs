@@ -36,11 +36,20 @@ import (
 
 // registry lists the kinds in display order. Each name's first letter (or
 // the key it names) toggles its section, so it must not clash with another
-// key of the page.
+// key of the page. A kind with commands of its own gets them here; the
+// header's commands line shows them after those every row has.
 func registry() []resources.Resource {
 	return []resources.Resource{
-		gitops.New(), deployments.New(), replicasets.New(), pods.New(), services.New(), ingressroutes.New(),
-		configmaps.New(), pvcs.New(), pvs.New(), secrets.New(),
+		gitops.New(),
+		deployments.New(),
+		replicasets.New(),
+		pods.New(podcommands.All()...),
+		services.New(),
+		ingressroutes.New(),
+		configmaps.New(),
+		pvcs.New(),
+		pvs.New(),
+		secrets.New(secretcommands.All()...),
 	}
 }
 
@@ -57,18 +66,6 @@ func ordered(cfg *config.Config, kinds []resources.Resource) []resources.Resourc
 		out = append(out, byName[n])
 	}
 	return out
-}
-
-// kindCommands are a kind's own commands (its commands folder); those for
-// every kind come from resources/commands. The config binds them to keys.
-func kindCommands(kind string) []resources.Command {
-	switch kind {
-	case "pods":
-		return podcommands.All()
-	case "secrets":
-		return secretcommands.All()
-	}
-	return nil
 }
 
 // Info describes what is being watched.
@@ -294,7 +291,8 @@ func (m *model) View() string {
 		return "starting…"
 	}
 	if top := m.top(); top != nil {
-		return fitLines(top.view(m.width, m.height-2), m.height-2) + "\n" + m.navBarCommands(top.hints(), "") + "\n" + m.navBarResources()
+		h := max(1, m.height-headerLines-footerLines)
+		return m.headerView() + "\n" + fitLines(top.view(m.width, h), h) + "\n" + m.footer(top.hints())
 	}
 	return m.pageView()
 }
@@ -338,11 +336,6 @@ func (m *model) Listed() []resources.Ref {
 	return m.listed
 }
 
-// ---- navigation bar --------------------------------------------------------------
-
-// scopes are the menus that change what is shown: each opens a picker.
-var scopes = []string{"contexts", "namespaces", "filter"}
-
 // toggleKey is the key that shows or hides a kind's section: the first
 // letter of its name, unless it names another one.
 func toggleKey(k resources.Resource) string {
@@ -350,48 +343,4 @@ func toggleKey(k resources.Resource) string {
 		return kk.Key()
 	}
 	return k.Name()[:1]
-}
-
-// navBarItem renders a menu or toggle item: its name with the key letter
-// highlighted. When on (picker open / section shown) the whole item is
-// underlined and active.
-func navBarItem(name, letter string, on bool) string {
-	st, key := menu, menu.Foreground(infoColor).Bold(true)
-	if on {
-		st, key = menuActive, menuActive.Underline(true)
-	}
-	i := max(0, strings.Index(name, letter))
-	return st.Render(" "+name[:i]) + key.Render(name[i:i+1]) + st.Render(name[i+1:]+" ") + " "
-}
-
-// navBarCommands: the scope menus (highlighted while their picker is open)
-// and the commands of what is on screen — or a recent notice such as an
-// error. Each menu is its name with its key letter in cyan. right (if any)
-// sits at the far right of the line.
-func (m *model) navBarCommands(cmds, right string) string {
-	open := ""
-	if p, ok := m.top().(*pickerScreen); ok {
-		open = p.scope
-	}
-	var b strings.Builder
-	for _, s := range scopes {
-		b.WriteString(navBarItem(s, s[:1], s == open))
-	}
-	if m.notice != "" && time.Since(m.noticeAt) < 6*time.Second {
-		cmds = yellow.Render(m.notice)
-	}
-	left := b.String() + " " + cmds
-	if right == "" {
-		return clip(left, m.width)
-	}
-	return alignLR(left, right, m.width)
-}
-
-// navBarResources: the section toggles (highlighted while shown).
-func (m *model) navBarResources() string {
-	var b strings.Builder
-	for _, k := range m.kinds {
-		b.WriteString(navBarItem(k.Name(), toggleKey(k), m.page.shown(k)))
-	}
-	return clip(b.String(), m.width)
 }

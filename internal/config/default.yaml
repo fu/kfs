@@ -4,8 +4,8 @@
 # then keeps it up to date (hidden sections and rows, last namespaces), so
 # comments do not survive there. Edit it while kfs is not running.
 
-# The file format. kfs migrates older files and never overwrites a newer one.
-version: 1
+# The file format. kfs upgrades older files and never overwrites a newer one.
+version: 2
 
 # The order of the sections, top to bottom (and in the menu). Sections not
 # listed follow in this order.
@@ -49,9 +49,9 @@ layout:
 rail:
   minutes: 10
 
-# What each section on the page shows in the status line, after its name;
-# "*" adds to every section ("pods: []" leaves pods only the "*" items).
-# Sections toggled off show nothing. Available:
+# What each section on the page shows in its title, after its name; "*"
+# adds to every section ("pods: []" leaves pods only the "*" items).
+# Available:
 #   every section:  errors (a watch that fails), hidden (rows hidden by state)
 #   gitops:         light (the worst light of the apps and their parents)
 #   deployments, replicasets, pods, services, ingressroutes, claims, volumes:
@@ -76,12 +76,13 @@ status:
 # keys, Shift+<section key> to sort a section by its columns, q a Q A, j k,
 # digits, esc) win over commands. Available:
 #   every section:  describe (kubectl describe), yaml (kubectl get -o yaml,
-#                   secret values masked)
-#   pods:           logs, previous-logs (kubectl logs -p), shell, forward
+#                   secret values masked), copy (the name to the clipboard)
+#   pods:          logs, previous-logs (kubectl logs -p), shell, forward
 #   secrets:        open (values masked until r reveals them)
 commands:
   "*":
     describe: d
+    copy: y
   pods:
     logs: l enter
     shell: h

@@ -17,8 +17,8 @@ var (
 	struck = lipgloss.NewStyle().Faint(true).Strikethrough(true)
 
 	// Set from the palette (config colors).
-	badge, green, yellow, amber, red, cyan, flash, menu, menuActive lipgloss.Style
-	selectedBG, linkedBG, infoColor                                 lipgloss.Color
+	badge, green, yellow, amber, red, cyan, flash, menu lipgloss.Style
+	selectedBG, linkedBG, infoColor                     lipgloss.Color
 )
 
 func init() { setPalette(config.Defaults) }
@@ -33,7 +33,6 @@ func setPalette(c config.Colors) {
 	badge = lipgloss.NewStyle().Bold(true).Foreground(black).Background(infoColor).Padding(0, 1)
 	flash = lipgloss.NewStyle().Bold(true).Foreground(black).Background(col(c.Flash))
 	menu = lipgloss.NewStyle().Foreground(light).Background(col(c.Menu))
-	menuActive = lipgloss.NewStyle().Bold(true).Foreground(black).Background(infoColor)
 	selectedBG, linkedBG = col(c.Selected), col(c.Linked)
 }
 
@@ -147,15 +146,20 @@ func alignLR(left, right string, w int) string {
 
 // hints renders commands: the part in [brackets] is the key and shows in
 // cyan (ideally a letter of the word, as in "s[h]ell"), the rest dim.
-func hints(s string) string {
+func hints(s string) string { return marked(s, dim) }
+
+// marked renders s in text's style, the parts in [brackets] (the keys) in
+// cyan on the same ground.
+func marked(s string, text lipgloss.Style) string {
+	key := text.Faint(false).Foreground(infoColor)
 	var b strings.Builder
 	for {
 		i, j := strings.IndexByte(s, '['), strings.IndexByte(s, ']')
 		if i < 0 || j < i {
-			b.WriteString(dim.Render(s))
+			b.WriteString(text.Render(s))
 			return b.String()
 		}
-		b.WriteString(dim.Render(s[:i]) + cyan.Bold(true).Render(s[i+1:j]))
+		b.WriteString(text.Render(s[:i]) + key.Render(s[i+1:j]))
 		s = s[j+1:]
 	}
 }

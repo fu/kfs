@@ -20,6 +20,8 @@ import (
 )
 
 type Resource struct {
+	resources.Own // open (secrets/commands)
+
 	host   resources.Host
 	gen    int
 	cancel context.CancelFunc
@@ -31,7 +33,8 @@ type Resource struct {
 	errAt  time.Time
 }
 
-func New() *Resource { return &Resource{} }
+// New is the secrets kind with its own commands (secrets/commands.All()).
+func New(own ...resources.Command) *Resource { return &Resource{Own: own} }
 
 type (
 	rowMsg struct {

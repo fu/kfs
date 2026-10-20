@@ -213,7 +213,22 @@ ReplicaSets) are shown.
 
 ## Keys
 
-The navigation bar shows the menus with their key letter in cyan:
+The header has a line per group, the logo down its left edge; the footer has
+the keys that work the TUI itself. Key letters are in cyan; a shown section
+sits on a grey ground.
+
+```
+k  ctx … │ ns … │ filter …                                ● watching
+f  [c]ontexts [n]amespaces [f]ilter [d]escribe cop[y]   ┃  pods [l]ogs s[h]ell for[w]ard
+s  [g]itops d[e]ployments … [s]ecrets │ [shift+key] sort column
+
+   pods 8 ●5 ●1 ●0 (+2 hidden)
+   #  NAME  …
+   [↑↓] move  [tab] next section  [0-9] row #  [q/a] scroll changes  [Q/A] resize  [esc] quit
+```
+
+The `f` line has the scopes and the commands every row has, then (after
+`┃`, under the kind's name) those the selected row's kind adds.
 
 | key | |
 |-----|---|
@@ -224,6 +239,7 @@ The navigation bar shows the menus with their key letter in cyan:
 | `tab` / `shift+tab` | jump to the first row of the next / previous section, round and round |
 | mouse wheel / trackpad | over the sections: move the selection; over the change log: scroll it; on a screen (logs, describe, pickers): like `↑↓`. kfs takes the mouse for this, so select text with `Shift` (`Option` in macOS Terminal and iTerm2) |
 | `d` | on any row: **d**escribe it, the same text as `kubectl describe` (from kubectl's own describe code) |
+| `y` | on any row: cop**y** its name to the clipboard (`pbcopy`, `wl-copy`, `xclip` or `xsel`; over SSH an OSC 52 escape, which tmux passes on only with `set-clipboard on`) |
 | `l` / `h` / `w` | on a pod: **l**ogs, s**h**ell, for**w**ard a port (again: stop) |
 | `enter` | on a pod: logs; on a secret: open it |
 

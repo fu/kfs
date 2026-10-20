@@ -1,5 +1,5 @@
-// Package commands are the commands every kind's rows offer: describe and
-// yaml. Kind-specific ones live in the kind's own commands folder.
+// Package commands are the commands every kind's rows offer: describe, yaml
+// and copy. Kind-specific ones live in the kind's own commands folder.
 package commands
 
 import (
@@ -10,7 +10,7 @@ import (
 )
 
 // All are the commands for every kind, in hint order.
-func All() []resources.Command { return []resources.Command{Describe, YAML} }
+func All() []resources.Command { return []resources.Command{Describe, YAML, Copy} }
 
 // text turns command output into viewer lines (tabs as spaces).
 func text(out string, emit func(resources.Line)) {

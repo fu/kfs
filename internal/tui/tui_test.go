@@ -131,11 +131,13 @@ func TestPageKeysAreUnique(t *testing.T) {
 		}
 		seen[key] = what
 	}
-	for _, s := range scopes {
-		use(s[:1], "menu "+s)
+	for _, s := range scopes() {
+		use(s.key, "menu "+s.name)
 	}
-	for _, k := range []string{"q", "a", "Q", "A", "j", "k", "G", "esc"} {
-		use(k, "page key")
+	for _, t := range tuiKeys() {
+		for _, k := range strings.Fields(t.keys) {
+			use(k, "tui key")
+		}
 	}
 	for _, k := range registry() {
 		key := toggleKey(k)
@@ -197,10 +199,10 @@ func TestCommandsComeFromTheConfig(t *testing.T) {
 			hints = append(hints, a.hint)
 		}
 	}
-	if got := strings.Join(keys, " "); got != "l enter h w d" {
+	if got := strings.Join(keys, " "); got != "l enter h w d y" {
 		t.Errorf("keys %q", got)
 	}
-	if got := strings.Join(hints, " "); got != "[l]ogs s[h]ell for[w]ard [d]escribe" {
+	if got := strings.Join(hints, " "); got != "[l]ogs s[h]ell for[w]ard [d]escribe cop[y]" {
 		t.Errorf("hints %q", got)
 	}
 
@@ -211,7 +213,7 @@ func TestCommandsComeFromTheConfig(t *testing.T) {
 	for _, a := range m.actions() {
 		hints = append(hints, a.hint)
 	}
-	if got := strings.Join(hints, " "); got != "previ[o]us-logs [x] shell [d]escribe" {
+	if got := strings.Join(hints, " "); got != "previ[o]us-logs [x] shell [d]escribe cop[y]" {
 		t.Errorf("remapped hints %q", got)
 	}
 }

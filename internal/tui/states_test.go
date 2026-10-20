@@ -6,6 +6,7 @@ import (
 
 	"github.com/fu/kfs/internal/config"
 	"github.com/fu/kfs/internal/resources"
+	podcommands "github.com/fu/kfs/internal/resources/pods/commands"
 )
 
 // podKind is a stateful kind with fixed rows.
@@ -14,11 +15,12 @@ type podKind struct {
 	rows []resources.Row
 }
 
-func (k podKind) Name() string          { return "pods" }
-func (k podKind) Rows() []resources.Row { return k.rows }
-func (k podKind) States() []string      { return []string{"running", "completed"} }
-func (k podKind) Ready() bool           { return true }
-func (k podKind) Available() bool       { return true }
+func (k podKind) Name() string                  { return "pods" }
+func (k podKind) Commands() []resources.Command { return podcommands.All() }
+func (k podKind) Rows() []resources.Row         { return k.rows }
+func (k podKind) States() []string              { return []string{"running", "completed"} }
+func (k podKind) Ready() bool                   { return true }
+func (k podKind) Available() bool               { return true }
 func (k podKind) Indicators() []resources.Indicator {
 	return []resources.Indicator{{Name: "lights", Cells: func() []resources.Cell { return []resources.Cell{{Text: "3"}} }}}
 }
@@ -34,18 +36,15 @@ func TestHiddenStatesLeaveTheTableButAreCounted(t *testing.T) {
 	if got := keys(m.rows(pods)); len(got) != 1 || got[0] != "a" {
 		t.Errorf("shown rows: %v", got)
 	}
-	if !strings.Contains(m.statusLine(), "pods 3 (+2 hidden)") {
-		t.Errorf("status line should say what is hidden: %q", m.statusLine())
+	if got := m.sectionTitle(pods); !strings.Contains(got, "pods 3 (+2 hidden)") {
+		t.Errorf("the section title should say what is hidden: %q", got)
 	}
-
-	cfg.SetHidden("pods", true)
 	if strings.Contains(m.statusLine(), "pods") {
-		t.Errorf("a section toggled off says nothing in the status line: %q", m.statusLine())
+		t.Errorf("the status line leaves the sections to their titles: %q", m.statusLine())
 	}
-	cfg.SetHidden("pods", false)
 
 	cfg.Status["pods"] = []string{} // only the "*" items: errors, hidden
-	if got := m.statusLine(); strings.Contains(got, "pods 3") || !strings.Contains(got, "pods (+2 hidden)") {
+	if got := m.sectionTitle(pods); strings.Contains(got, "pods 3") || !strings.Contains(got, "pods (+2 hidden)") {
 		t.Errorf("the config picks the items: %q", got)
 	}
 

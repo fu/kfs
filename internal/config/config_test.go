@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"go.yaml.in/yaml/v3"
 )
 
 func TestDefaultYAMLIsComplete(t *testing.T) {
@@ -170,6 +172,40 @@ func TestFileWithoutLayoutGetsItsDefault(t *testing.T) {
 	}
 	if got := c.ChangesPct(); got != 33 {
 		t.Errorf("changes_pct = %d, want default 33", got)
+	}
+}
+
+func TestEveryVersionHasAnUpgrade(t *testing.T) {
+	if len(upgrades) != Version-1 {
+		t.Errorf("%d upgrades for version %d", len(upgrades), Version)
+	}
+}
+
+func TestPreflightUpgradesAndSaves(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	os.WriteFile(path, []byte("version: 1\ncommands:\n  \"*\": {describe: d}\n"), 0o644)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Version != Version || strings.Join(c.CommandKeys("pods", "copy"), " ") != "y" {
+		t.Errorf("upgraded: version %d, copy on %v", c.Version, c.CommandKeys("pods", "copy"))
+	}
+	var saved Config
+	data, _ := os.ReadFile(path)
+	if yaml.Unmarshal(data, &saved); saved.Version != Version || saved.Commands["*"]["copy"] != "y" {
+		t.Errorf("the upgrade is written back:\n%s", data)
+	}
+
+	// The user's own choices stay: y taken by yaml, copy set (or off).
+	for _, star := range []string{"{describe: d, yaml: y}", "{copy: c}", `{copy: ""}`} {
+		os.WriteFile(path, []byte("version: 1\ncommands:\n  \"*\": "+star+"\n"), 0o644)
+		c, _ := Load(path)
+		before := Config{}
+		yaml.Unmarshal([]byte("commands:\n  \"*\": "+star+"\n"), &before)
+		if got, want := c.Commands["*"]["copy"], before.Commands["*"]["copy"]; got != want {
+			t.Errorf("%s: copy %q, want %q", star, got, want)
+		}
 	}
 }
 

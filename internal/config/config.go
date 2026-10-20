@@ -18,13 +18,20 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// Version is the file format this kfs writes. Bump it when a key is added
-// or changed (an older kfs would drop it when saving) and teach migrate how
-// to read the older ones.
+// Version is the file format this kfs writes: one more than the upgrades.
+// When a release changes what a file should have (a new key, a new default
+// command), add an upgrade and bump it.
 //
 //	1  version, sections, resource_order, hide, commands, status, layout,
 //	   rail, namespaces, colors
-const Version = 1
+//	2  commands "*": copy on y
+const Version = 2
+
+// upgrades bring a file from one version to the next: upgrades[0] takes a
+// version 1 file to 2. Each changes only what the user has not set.
+var upgrades = []func(c *Config){
+	func(c *Config) { c.offerCommand("*", "copy", "y") },
+}
 
 //go:embed default.yaml
 var defaultYAML []byte
@@ -133,23 +140,50 @@ func Load(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, c); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	c.migrate()
+	upgraded := c.preflight()
 	c.fill(Default())
+	if upgraded {
+		_ = c.Save() // kfs runs on the upgraded config even if it cannot write it
+	}
 	return c, nil
 }
 
-// migrate brings an older file to Version. A file without a version is
-// version 1. A newer one is read as far as this kfs understands it and
-// never written back, so its settings survive.
-func (c *Config) migrate() {
+// preflight brings an older file to Version, upgrade by upgrade, and
+// reports whether it did. A file without a version is version 1. A newer
+// one is read as far as this kfs understands it and never written back, so
+// its settings survive.
+func (c *Config) preflight() (upgraded bool) {
 	if c.Version == 0 {
 		c.Version = 1
 	}
 	if c.Version > Version {
 		c.readOnly = true
+		return false
+	}
+	for ; c.Version < Version; c.Version++ {
+		upgrades[c.Version-1](c)
+		upgraded = true
+	}
+	return upgraded
+}
+
+// offerCommand binds a section's command to key in a file whose section
+// says nothing about it, unless another of its commands has that key. A
+// file without the section gets the whole default section from fill.
+func (c *Config) offerCommand(section, command, key string) {
+	cmds := c.Commands[section]
+	if cmds == nil {
 		return
 	}
-	c.Version = Version
+	if _, set := cmds[command]; set {
+		return
+	}
+	for _, keys := range cmds {
+		if slices.Contains(strings.Fields(keys), key) {
+			return
+		}
+	}
+	cmds[command] = key
 }
 
 // fill gives keys the file does not have their defaults. A section missing

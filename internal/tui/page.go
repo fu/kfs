@@ -115,13 +115,14 @@ type action struct {
 	do   func() resources.Step
 }
 
-// actions are the selected row's commands the config offers, with their
-// keys: the kind's own commands, then those for every kind (only on rows
-// that show an object).
-func (m *model) actions() []action {
+// rowCommands are the selected row's commands the config offers, with their
+// keys, in the two groups of the header's commands line: those every row
+// has (resources/commands, only on rows that show an object) and those its
+// kind adds (a resources.Commander).
+func (m *model) rowCommands() (every, own []action) {
 	k, key := m.selection()
 	if k == nil {
-		return nil
+		return nil, nil
 	}
 	var ref resources.Ref
 	var sub string
@@ -131,25 +132,37 @@ func (m *model) actions() []action {
 			sub = r.Sub
 		}
 	}
-	cmds := kindCommands(k.Name())
-	if ref.Kind != "" {
-		cmds = append(cmds, commands.All()...)
-	}
 	target := resources.Target{Host: kindHost{m, k}, Kind: k, Key: key, Ref: ref, Sub: sub}
-	var out []action
-	for _, c := range cmds {
-		if c.Enabled != nil && !c.Enabled(target) {
-			continue
-		}
-		for i, keyName := range m.page.cfg.CommandKeys(k.Name(), c.Name) {
-			a := action{key: keyName, do: func() resources.Step { return c.Run(target) }}
-			if i == 0 {
-				a.hint = commandHint(c.Name, keyName)
+	bind := func(cmds []resources.Command) []action {
+		var out []action
+		for _, c := range cmds {
+			if c.Enabled != nil && !c.Enabled(target) {
+				continue
 			}
-			out = append(out, a)
+			for i, keyName := range m.page.cfg.CommandKeys(k.Name(), c.Name) {
+				a := action{key: keyName, do: func() resources.Step { return c.Run(target) }}
+				if i == 0 {
+					a.hint = commandHint(c.Name, keyName)
+				}
+				out = append(out, a)
+			}
 		}
+		return out
 	}
-	return out
+	if ref.Kind != "" {
+		every = bind(commands.All())
+	}
+	if c, ok := k.(resources.Commander); ok {
+		own = bind(c.Commands())
+	}
+	return every, own
+}
+
+// actions are all the selected row's commands: its kind's own, then those
+// every row has.
+func (m *model) actions() []action {
+	every, own := m.rowCommands()
+	return append(own, every...)
 }
 
 // commandHint shows a command with its key: the key's letter in the name
@@ -213,8 +226,8 @@ func (m *model) wheel(msg tea.MouseMsg) tea.Cmd {
 		}
 		return cmd
 	}
-	// status line, the rail's first slot, the sections, the divider, the log
-	if l := m.layout(); msg.Y > 2+l.body {
+	// the header, the rail's first slot, the sections, the divider, the log
+	if l := m.layout(); msg.Y > headerLines+1+l.body {
 		if up {
 			m.changes.back++ // the pane clamps it
 		} else {
@@ -230,52 +243,29 @@ func (m *model) wheel(msg tea.MouseMsg) tea.Cmd {
 	return nil
 }
 
+// pageKey goes through the groups in turn: the scopes, the sections, the
+// TUI's own keys, then the selected row's commands (so the page's keys win).
 func (m *model) pageKey(msg tea.KeyMsg) tea.Cmd {
 	key := msg.String()
-	switch key {
-	case "c":
-		return m.openContexts()
-	case "n":
-		return m.openNamespaces()
-	case "f":
-		return m.openFilter()
-	}
-	if isDigit(key) {
-		// Jump to row #n of the section the cursor is in.
-		if k, _ := m.selection(); k != nil {
-			ks := keys(m.rows(k))
-			if n := typeNumber(&m.page.jumpBuf, &m.page.jumpAt, key); n >= 1 && n <= len(ks) {
-				m.page.selected, m.page.moved = k.Name()+"/"+ks[n-1], true
-			}
-		}
-		return nil
-	}
-	// Shift+<section key> (the key's capital) cycles that section's column sort.
-	if len(key) == 1 && 'A' <= key[0] && key[0] <= 'Z' {
-		lower := strings.ToLower(key)
-		for _, k := range m.kinds {
-			if m.page.shown(k) && k.Available() && toggleKey(k) == lower {
-				m.page.cycle(k.Name(), k.Columns())
-				return nil
-			}
+	for _, s := range scopes() {
+		if key == s.key {
+			return s.open(m)
 		}
 	}
 	for _, k := range m.kinds {
-		if key == toggleKey(k) {
-			m.page.toggle(k)
-			var cmd tea.Cmd
-			if m.page.shown(k) && !m.started[k.Name()] {
-				cmd = k.Start(kindHost{m, k})
-				m.started[k.Name()] = true
-			} else if !m.page.shown(k) && m.started[k.Name()] {
-				k.Stop()
-				delete(m.started, k.Name())
+		switch key {
+		case toggleKey(k):
+			return m.toggleSection(k)
+		case strings.ToUpper(toggleKey(k)): // Shift+<section key>
+			if m.page.shown(k) && k.Available() {
+				m.page.cycle(k.Name(), k.Columns())
 			}
-			m.listedAt = time.Time{} // invalidate cache: sections changed
-			if err := m.page.cfg.Save(); err != nil {
-				m.Notice("config: " + err.Error())
-			}
-			return cmd
+			return nil
+		}
+	}
+	for _, t := range tuiKeys() {
+		if t.matches(key) {
+			return t.do(m, key)
 		}
 	}
 	for _, a := range m.actions() {
@@ -284,38 +274,41 @@ func (m *model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			return cmd
 		}
 	}
-	page := m.layout().body
-	switch key {
-	case "esc":
-		return tea.Quit
-	case "up", "k":
-		m.moveSelection(-1)
-	case "down", "j":
-		m.moveSelection(1)
-	case "tab":
-		m.moveSection(1)
-	case "shift+tab":
-		m.moveSection(-1)
-	case "pgup":
-		m.moveSelection(-page)
-	case "pgdown":
-		m.moveSelection(page)
-	case "home":
-		m.moveSelection(-1 << 30)
-	case "end":
-		m.moveSelection(1 << 30)
-	case "q":
-		m.changes.back++ // the pane clamps it
-	case "a":
-		m.changes.back = max(0, m.changes.back-1)
-	case "Q": // move the divider up: a taller change log
-		m.page.grow = m.layout().changes - m.defaultChanges() + 1
-		m.saveChangesPct()
-	case "A": // and down
-		m.page.grow = m.layout().changes - m.defaultChanges() - 1
-		m.saveChangesPct()
-	}
 	return nil
+}
+
+// toggleSection shows or hides k's section, starting or stopping its watch.
+func (m *model) toggleSection(k resources.Resource) tea.Cmd {
+	m.page.toggle(k)
+	var cmd tea.Cmd
+	if m.page.shown(k) && !m.started[k.Name()] {
+		cmd = k.Start(kindHost{m, k})
+		m.started[k.Name()] = true
+	} else if !m.page.shown(k) && m.started[k.Name()] {
+		k.Stop()
+		delete(m.started, k.Name())
+	}
+	m.listedAt = time.Time{} // invalidate cache: sections changed
+	if err := m.page.cfg.Save(); err != nil {
+		m.Notice("config: " + err.Error())
+	}
+	return cmd
+}
+
+// jumpTo moves to row #n of the section the cursor is in, digit by digit.
+func (m *model) jumpTo(digit string) {
+	if k, _ := m.selection(); k != nil {
+		ks := keys(m.rows(k))
+		if n := typeNumber(&m.page.jumpBuf, &m.page.jumpAt, digit); n >= 1 && n <= len(ks) {
+			m.page.selected, m.page.moved = k.Name()+"/"+ks[n-1], true
+		}
+	}
+}
+
+// moveDivider moves the divider by delta lines (up: a taller change log).
+func (m *model) moveDivider(delta int) {
+	m.page.grow = m.layout().changes - m.defaultChanges() + delta
+	m.saveChangesPct()
 }
 
 // saveChangesPct folds the divider's current position into the config so the
@@ -326,7 +319,7 @@ func (m *model) saveChangesPct() {
 	if m.page.cfg == nil {
 		return
 	}
-	avail := m.height - 2 - 1 - 2 - 3
+	avail := m.maxChanges()
 	if avail <= 0 {
 		return
 	}
@@ -355,18 +348,30 @@ func (m *model) applySavedPct() {
 	if pct <= 0 {
 		return
 	}
-	avail := m.height - 2 - 1 - 2 - 3
+	avail := m.maxChanges()
 	if avail <= 0 {
 		return
 	}
 	m.page.grow = avail*pct/100 - m.defaultChanges()
 }
 
+// The page from top to bottom: the header, the rail's first slot, the
+// sections, the change log's divider, the change log, the footer.
+const (
+	railSlotLines = 1
+	dividerLines  = 1
+	minBody       = 3 // the sections keep at least 3 lines
+	minChanges    = 2 // and the change log 2
+)
+
+// maxChanges is the most lines the change log can take.
+func (m *model) maxChanges() int {
+	return m.height - headerLines - railSlotLines - dividerLines - footerLines - minBody
+}
+
 func (m *model) layout() layout {
-	// status line + blank + body + changes rule + changes + two nav bar lines;
-	// the change log keeps at least 2 lines, the sections at least 3.
-	l := layout{changes: max(2, min(m.height-2-1-2-3, m.defaultChanges()+m.page.grow))}
-	l.body = max(1, m.height-2-1-l.changes-2)
+	l := layout{changes: max(minChanges, min(m.maxChanges(), m.defaultChanges()+m.page.grow))}
+	l.body = max(1, m.height-headerLines-railSlotLines-dividerLines-l.changes-footerLines)
 	return l
 }
 
@@ -375,12 +380,7 @@ func (m *model) statusLine() string {
 	if m.info.Selector != "" {
 		filter = "filter " + cyan.Render(m.info.Selector)
 	}
-	parts := []string{badge.Render("kfs"), "ctx " + cyan.Render(m.info.Context), "ns " + cyan.Render(m.info.Namespace), filter}
-	for _, k := range m.sections() {
-		if s := m.sectionStatus(k); s != "" {
-			parts = append(parts, s)
-		}
-	}
+	parts := []string{"ctx " + cyan.Render(m.info.Context), "ns " + cyan.Render(m.info.Namespace), filter}
 	ready := true
 	for _, k := range m.sections() {
 		ready = ready && k.Ready()
@@ -389,13 +389,13 @@ func (m *model) statusLine() string {
 	if ready {
 		right = m.pulse() + " " + cyan.Render("watching")
 	}
-	return alignLR(joinParts(parts), right, m.width)
+	return alignLR(logoCell(0)+joinParts(parts), right, m.width)
 }
 
-// sectionStatus is a section's part of the status line: its name and the
-// items the config picks (its own indicators, and "hidden": rows hidden by
-// state), those with something to say; empty if none has.
-func (m *model) sectionStatus(k resources.Resource) string {
+// sectionTitle is a section's heading: its name and the items the config
+// picks (its own indicators, and "hidden": rows hidden by state), those with
+// something to say.
+func (m *model) sectionTitle(k resources.Resource) string {
 	byName := map[string]resources.Indicator{}
 	for _, ind := range k.Indicators() {
 		byName[ind.Name] = ind
@@ -415,10 +415,7 @@ func (m *model) sectionStatus(k resources.Resource) string {
 			items = append(items, cells(cs))
 		}
 	}
-	if len(items) == 0 {
-		return ""
-	}
-	return k.Name() + " " + strings.Join(items, " ")
+	return strings.Join(append([]string{header.Render(k.Name())}, items...), " ")
 }
 
 func (m *model) pageView() string {
@@ -453,7 +450,7 @@ func (m *model) pageView() string {
 		if len(lines) > 0 {
 			lines = append(lines, "")
 		}
-		lines = append(lines, header.Render(k.Name()))
+		lines = append(lines, clip(m.sectionTitle(k), pw))
 		if len(rows) == 0 {
 			empty := k.Empty()
 			if n := m.hiddenRows(k); n > 0 {
@@ -502,7 +499,7 @@ func (m *model) pageView() string {
 	})
 
 	var b strings.Builder
-	b.WriteString(m.statusLine())
+	b.WriteString(m.headerView())
 	b.WriteString("\n" + rv.down[0] + "\n")
 	bulb := m.pulse()
 	for i := 0; i < l.body; i++ {
@@ -522,20 +519,11 @@ func (m *model) pageView() string {
 	}
 	b.WriteString(changes)
 
-	var cmds []string
-	for _, a := range m.actions() {
-		if a.hint != "" {
-			cmds = append(cmds, a.hint)
-		}
-	}
-	line := strings.Join(cmds, "  ")
+	keys := tuiHints()
 	if m.page.jumpBuf != "" && time.Since(m.page.jumpAt) < jumpWindow {
-		line = "go to #[" + m.page.jumpBuf + "]"
+		keys = "go to #[" + m.page.jumpBuf + "]  " + keys
 	}
-	tui := hints("[shift+section] sort  [q/a] scroll changes  [Q/A] resize TUI  [esc] quit")
-	b.WriteString(m.navBarCommands(hints(line), tui))
-	b.WriteByte('\n')
-	b.WriteString(m.navBarResources())
+	b.WriteString(m.footer(hints(keys)))
 	return b.String()
 }
 
