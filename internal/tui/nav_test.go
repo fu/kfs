@@ -47,15 +47,4 @@ func TestTabCyclesSections(t *testing.T) {
 	}
 }
 
-func TestWheelMovesSelectionOrScrollsLog(t *testing.T) {
-	m := navModel()
-	m.page.selected = "pods/p1"
-	m.wheel(tea.MouseMsg{Button: tea.MouseButtonWheelDown, Y: 5})
-	if m.page.selected != "pods/p2" {
-		t.Errorf("wheel down over the sections: at %q", m.page.selected)
-	}
-	m.wheel(tea.MouseMsg{Button: tea.MouseButtonWheelUp, Y: m.height - 4})
-	if m.changes.back != 1 || m.page.selected != "pods/p2" {
-		t.Errorf("wheel up over the log: back %d, at %q", m.changes.back, m.page.selected)
-	}
-}
+

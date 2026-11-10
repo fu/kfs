@@ -1,10 +1,11 @@
 // Package commands are what a pod row can do: logs, previous-logs, shell,
-// forward. Which of them the page offers, and on which keys, is up to the
-// config.
+// forward, delete. Which of them the page offers, and on which keys, is up to
+// the config.
 //
 //	logs.go        logs, previous-logs
 //	shell.go       shell
 //	forward.go     forward
+//	delete.go      delete
 //
 // Multi-container pods show their containers as sub-rows; logs and shell
 // work on those (via Target.Sub) and are hidden from the parent row.
@@ -17,7 +18,7 @@ import (
 
 // All are the pods' commands, in hint order.
 func All() []resources.Command {
-	return []resources.Command{Logs, PreviousLogs, Shell, Forward}
+	return []resources.Command{Logs, PreviousLogs, Shell, Forward, Delete}
 }
 
 // pod is the target's pod (live), if it still exists. For sub-rows (key

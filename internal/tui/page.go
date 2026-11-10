@@ -207,42 +207,6 @@ func (m *model) moveSection(delta int) {
 	m.page.selected, m.page.moved = firsts[((cur+delta)%n+n)%n], true
 }
 
-// wheel scrolls with the mouse wheel or trackpad: over the change log it
-// scrolls the log, elsewhere on the page it moves the selection; on a screen
-// it is the arrow keys.
-func (m *model) wheel(msg tea.MouseMsg) tea.Cmd {
-	up := msg.Button == tea.MouseButtonWheelUp
-	if !up && msg.Button != tea.MouseButtonWheelDown {
-		return nil
-	}
-	key := tea.KeyMsg{Type: tea.KeyDown}
-	if up {
-		key = tea.KeyMsg{Type: tea.KeyUp}
-	}
-	if top := m.top(); top != nil {
-		cmd, done := top.update(key)
-		if done {
-			m.close(top)
-		}
-		return cmd
-	}
-	// the header, the rail's first slot, the sections, the divider, the log
-	if l := m.layout(); msg.Y > headerLines+1+l.body {
-		if up {
-			m.changes.back++ // the pane clamps it
-		} else {
-			m.changes.back = max(0, m.changes.back-1)
-		}
-		return nil
-	}
-	if up {
-		m.moveSelection(-1)
-	} else {
-		m.moveSelection(1)
-	}
-	return nil
-}
-
 // pageKey goes through the groups in turn: the scopes, the sections, the
 // TUI's own keys, then the selected row's commands (so the page's keys win).
 func (m *model) pageKey(msg tea.KeyMsg) tea.Cmd {

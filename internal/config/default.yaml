@@ -37,7 +37,7 @@ hide:
 
 # Where the divider sits between the sections and the change log, as the
 # change log's share of the space in percent (5–95). kfs updates this on the
-# fly when you press Q / A and restores it on the next start.
+# fly when you press + / − and restores it on the next start.
 layout:
   changes_pct: 33
 
@@ -73,11 +73,12 @@ status:
 # Commands the selected row offers, per section, and their keys (several:
 # "l enter"). Commands not listed exist but are not offered; "*" is for every
 # section ("pods: {}" offers no pod commands). Page keys (c n f, the section
-# keys, Shift+<section key> to sort a section by its columns, q a Q A, j k,
-# digits, esc) win over commands. Available:
+# keys, Shift+<section key> to sort a section by its columns, q a + -, j k,
+# digits, Q) win over commands. Available:
 #   every section:  describe (kubectl describe), yaml (kubectl get -o yaml,
 #                   secret values masked), copy (the name to the clipboard)
-#   pods:          logs, previous-logs (kubectl logs -p), shell, forward
+#   pods:          logs, previous-logs (kubectl logs -p), shell, forward,
+#                   delete
 #   secrets:        open (values masked until r reveals them)
 commands:
   "*":
@@ -87,6 +88,7 @@ commands:
     logs: l enter
     shell: h
     forward: w
+    delete: ctrl+d
   secrets:
     open: enter
 

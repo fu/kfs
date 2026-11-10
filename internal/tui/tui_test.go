@@ -199,10 +199,10 @@ func TestCommandsComeFromTheConfig(t *testing.T) {
 			hints = append(hints, a.hint)
 		}
 	}
-	if got := strings.Join(keys, " "); got != "l enter h w d y" {
+	if got := strings.Join(keys, " "); got != "l enter h w ctrl+d d y" {
 		t.Errorf("keys %q", got)
 	}
-	if got := strings.Join(hints, " "); got != "[l]ogs s[h]ell for[w]ard [d]escribe cop[y]" {
+	if got := strings.Join(hints, " "); got != "[l]ogs s[h]ell for[w]ard [ctrl+d] delete [d]escribe cop[y]" {
 		t.Errorf("hints %q", got)
 	}
 
@@ -222,23 +222,23 @@ func TestDividerMoves(t *testing.T) {
 	m := &model{height: 40}
 	key := func(k string) { m.pageKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}) }
 	start := m.layout().changes // 12: a third of 40, at most 12
-	key("Q")
-	key("Q")
+	key("+")
+	key("+")
 	if got := m.layout().changes; got != start+2 {
-		t.Errorf("Q twice: %d lines, want %d", got, start+2)
+		t.Errorf("+ twice: %d lines, want %d", got, start+2)
 	}
 	for range 50 {
-		key("Q")
+		key("+")
 	}
 	if l := m.layout(); l.body != 3 {
 		t.Errorf("the sections keep 3 lines, got %d", l.body)
 	}
-	key("A") // one step back down, right away
+	key("-") // one step back down, right away
 	if l := m.layout(); l.body != 4 {
-		t.Errorf("A after the limit moves at once, body %d", l.body)
+		t.Errorf("- after the limit moves at once, body %d", l.body)
 	}
 	for range 50 {
-		key("A")
+		key("-")
 	}
 	if got := m.layout().changes; got != 2 {
 		t.Errorf("the change log keeps 2 lines, got %d", got)

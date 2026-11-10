@@ -137,9 +137,10 @@ func tuiKeys() []tuiKey {
 		{match: isDigit, hint: "[0-9] row #", do: func(m *model, key string) tea.Cmd { m.jumpTo(key); return nil }},
 		{keys: "q", hint: "[q/a] scroll changes", do: run(func(m *model) { m.changes.back++ })}, // the pane clamps it
 		{keys: "a", do: run(func(m *model) { m.changes.back = max(0, m.changes.back-1) })},
-		{keys: "Q", hint: "[Q/A] resize", do: run(func(m *model) { m.moveDivider(1) })},
-		{keys: "A", do: run(func(m *model) { m.moveDivider(-1) })},
-		{keys: "esc", hint: "[esc] quit", do: func(*model, string) tea.Cmd { return tea.Quit }},
+		{keys: "+", hint: "[+/−] resize", do: run(func(m *model) { m.moveDivider(1) })},
+		{keys: "-", do: run(func(m *model) { m.moveDivider(-1) })},
+		{keys: "Q", hint: "[Q] quit", do: func(*model, string) tea.Cmd { return tea.Quit }},
+		{keys: "esc", do: func(*model, string) tea.Cmd { return tea.Quit }},
 	}
 }
 

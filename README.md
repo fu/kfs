@@ -219,12 +219,12 @@ sits on a grey ground.
 
 ```
 k  ctx … │ ns … │ filter …                                ● watching
-f  [c]ontexts [n]amespaces [f]ilter [d]escribe cop[y]   ┃  pods [l]ogs s[h]ell for[w]ard
+f  [c]ontexts [n]amespaces [f]ilter [d]escribe cop[y]   ┃  pods [l]ogs s[h]ell for[w]ard [ctrl+d] delete
 s  [g]itops d[e]ployments … [s]ecrets │ [shift+key] sort column
 
    pods 8 ●5 ●1 ●0 (+2 hidden)
    #  NAME  …
-   [↑↓] move  [tab] next section  [0-9] row #  [q/a] scroll changes  [Q/A] resize  [esc] quit
+   [↑↓] move  [tab] next section  [0-9] row #  [q/a] scroll changes  [+/−] resize  [Q] quit
 ```
 
 The `f` line has the scopes and the commands every row has, then (after
@@ -237,10 +237,11 @@ The `f` line has the scopes and the commands every row has, then (after
 | `Shift` + section key | sort that section by its columns: a small arrow marks the column in order (it starts at NAME ↑); each press steps that column ↓, then the next column ↑, then ↓, cycling back to NAME ↑ |
 | `↑↓`, `0-9` | move; jump to row `#` of the current section |
 | `tab` / `shift+tab` | jump to the first row of the next / previous section, round and round |
-| mouse wheel / trackpad | over the sections: move the selection; over the change log: scroll it; on a screen (logs, describe, pickers): like `↑↓`. kfs takes the mouse for this, so select text with `Shift` (`Option` in macOS Terminal and iTerm2) |
+| text selection | the mouse is left to the terminal, so select and copy any text the usual way: drag to select a range, double-click a word, then the terminal's own copy. (Scrolling is on the keys below, so kfs does not grab the mouse.) |
 | `d` | on any row: **d**escribe it, the same text as `kubectl describe` (from kubectl's own describe code) |
 | `y` | on any row: cop**y** its name to the clipboard (`pbcopy`, `wl-copy`, `xclip` or `xsel`; over SSH an OSC 52 escape, which tmux passes on only with `set-clipboard on`) |
 | `l` / `h` / `w` | on a pod: **l**ogs, s**h**ell, for**w**ard a port (again: stop) |
+| `ctrl+d` | on a pod: **d**elete it (k8s restarts it via its workload) |
 | `enter` | on a pod: logs; on a secret: open it |
 
 The keys on the selected row are **commands**. The config decides which
@@ -255,9 +256,11 @@ ones above are the defaults. More exist than are bound by default:
 | `previous-logs` | pods | `kubectl logs -p`: the run before the last restart |
 | `shell` | pods | `kubectl exec -it … sh` |
 | `forward` | pods | `kubectl port-forward` (again: stop) |
+| `delete` | pods | `kubectl delete pod` (restarted by its workload) |
 | `open` | secrets | the keys, values masked until `r` |
 | `q` / `a` | scroll the change log up / down |
-| `Q` / `A` | move the divider up / down: a taller / shorter change log |
+| `+` / `-` | move the divider up / down: a taller / shorter change log |
+| `Q` | quit |
 | `esc` | back; on the main page: quit |
 
 The **filter** pane suggests selectors from the app labels in the namespace
