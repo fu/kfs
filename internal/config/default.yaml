@@ -5,7 +5,7 @@
 # comments do not survive there. Edit it while kfs is not running.
 
 # The file format. kfs upgrades older files and never overwrites a newer one.
-version: 2
+version: 4
 
 # The order of the sections, top to bottom (and in the menu). Sections not
 # listed follow in this order.
@@ -21,11 +21,11 @@ resource_order:
   - volumes
   - secrets
 
-# Sections toggled off with their key (g e r p i u o m v s) stay off on the next start.
+# Resources toggled off with their key (F1-F10, in resource_order) stay off on the next start.
 sections:
   hidden: []
 
-# Rows in these states are not shown (toggle them in the filter pane, f).
+# Rows in these states are not shown (toggle them in the filter pane, 3).
 #   pods:         running, pending, failing, completed
 #   deployments:  ready, progressing, stuck, scaled-down
 #   replicasets:  active, old (an earlier revision scaled to zero)
@@ -41,15 +41,15 @@ hide:
 layout:
   changes_pct: 33
 
-# The rail: a time line from the kfs badge down the left edge and along the
-# divider to the right, showing the last `minutes`. The newest moment is at the
-# top; everything walks towards the end as time passes. A slot is grey when
-# something changed then (brighter the more), red when an alert came in (a
-# warning event, or something turning red). It is re-cut to the window size.
+# The rail: a time line framing the change log, showing the last `minutes`.
+# Now is right after the change log's title; everything walks clockwise round
+# the frame to the top-left corner as time passes. A slot is cyan when
+# something changed then, amber for a warning, red when something failed.
+# It is re-cut to the window size.
 rail:
   minutes: 10
 
-# What each section on the page shows in its title, after its name; "*"
+# What each section shows at the bottom right of its frame; "*"
 # adds to every section ("pods: []" leaves pods only the "*" items).
 # Available:
 #   every section:  errors (a watch that fails), hidden (rows hidden by state)
@@ -72,35 +72,26 @@ status:
 
 # Commands the selected row offers, per section, and their keys (several:
 # "l enter"). Commands not listed exist but are not offered; "*" is for every
-# section ("pods: {}" offers no pod commands). Page keys (c n f, the section
-# keys, Shift+<section key> to sort a section by its columns, q a + -, j k,
-# digits, Q) win over commands. Available:
+# section ("pods: {}" offers no pod commands). They are listed at the
+# bottom of the selected row's frame, except those on enter. Page keys
+# (1 2 3 for context, namespace and filter, the resource keys F1-F10, ` to
+# sort the selected row's resource by its columns,
+# q a + -, j k, Q, esc) win over commands. Available:
 #   every section:  describe (kubectl describe), yaml (kubectl get -o yaml,
 #                   secret values masked), copy (the name to the clipboard)
-#   pods:          logs, previous-logs (kubectl logs -p), shell, forward,
+#   pods:           logs, previous-logs (kubectl logs -p), shell, forward,
 #                   delete
-#   secrets:        open (values masked until r reveals them)
+#   secrets:        extract (the decoded values)
 commands:
   "*":
-    describe: d
+    describe: enter
     copy: y
   pods:
-    logs: l enter
-    shell: h
-    forward: w
+    logs: l
+    shell: s
+    forward: f
     delete: ctrl+d
   secrets:
-    open: enter
+    extract: x
 
-# Colors as "#rrggbb" (quoted: # starts a YAML comment). An ANSI number
-# ("0"-"255") works too and follows your terminal's theme instead.
-colors:
-  good: "#5faf5f"       # green: running, synced, healthy
-  busy: "#ffaf00"       # amber: on its way (pending, rolling out)
-  warn: "#d7d700"       # yellow: worth a look (restarts, high usage)
-  bad: "#d75f5f"        # red: failing
-  info: "#00afaf"       # cyan: accents, the kfs badge, the menus' keys
-  flash: "#d7d700"      # background of a cell that just changed
-  selected: "#3a3a3a"   # background of the selected row
-  linked: "#005f5f"     # background of rows linked to the selected one
-  menu: "#303030"       # background of the menus
+# The colors are in theme.yaml, next to this file.

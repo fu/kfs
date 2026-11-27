@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fu/kfs/internal/config"
@@ -87,19 +88,6 @@ func TestFilterShowsOnlyEventsAboutListedObjects(t *testing.T) {
 	}
 }
 
-func TestJumpNumbers(t *testing.T) {
-	var buf string
-	var at time.Time
-	typeNumber(&buf, &at, "1")
-	if n := typeNumber(&buf, &at, "2"); n != 12 {
-		t.Fatalf("typing 1 then 2 should give 12, got %d", n)
-	}
-	at = time.Now().Add(-2 * jumpWindow) // pause: next digit starts a new number
-	if n := typeNumber(&buf, &at, "3"); n != 3 {
-		t.Fatalf("after a pause, 3 should give 3, got %d", n)
-	}
-}
-
 func TestTallEntryCanBeScrolledToItsFirstLine(t *testing.T) {
 	c := changeLog{back: 25} // more than possible: the pane clamps it
 	var items []string
@@ -121,8 +109,9 @@ func TestTallEntryCanBeScrolledToItsFirstLine(t *testing.T) {
 	}
 }
 
-// Every kind toggles with its first letter, so those letters must not clash
-// with each other, the scope menus, the page's own keys or the actions.
+// Every kind toggles with an F-key and sorts with Shift+it, so those keys
+// must not clash with each other, the scope menus, the page's own keys or
+// the actions.
 func TestPageKeysAreUnique(t *testing.T) {
 	seen := map[string]string{}
 	use := func(key, what string) {
@@ -139,12 +128,12 @@ func TestPageKeysAreUnique(t *testing.T) {
 			use(k, "tui key")
 		}
 	}
-	for _, k := range registry() {
-		key := toggleKey(k)
-		if !strings.Contains(k.Name(), key) {
-			t.Errorf("section %s: key %q is not a letter of its name", k.Name(), key)
+	use(sortKey, "sort")
+	for i, k := range registry() {
+		if sectionKey(i) == "" {
+			t.Errorf("section %s: no F-key left for it", k.Name())
 		}
-		use(key, "section "+k.Name())
+		use(sectionKey(i), "section "+k.Name())
 		if len(k.Tag()) > 3 {
 			t.Errorf("section %s: tag %q is longer than 3 letters", k.Name(), k.Tag())
 		}
@@ -199,10 +188,10 @@ func TestCommandsComeFromTheConfig(t *testing.T) {
 			hints = append(hints, a.hint)
 		}
 	}
-	if got := strings.Join(keys, " "); got != "l enter h w ctrl+d d y" {
+	if got := strings.Join(keys, " "); got != "l s f ctrl+d enter y" {
 		t.Errorf("keys %q", got)
 	}
-	if got := strings.Join(hints, " "); got != "[l]ogs s[h]ell for[w]ard [ctrl+d] delete [d]escribe cop[y]" {
+	if got := strings.Join(hints, " "); got != "[l]ogs [s]hell [f]orward [ctrl+d] delete cop[y]" { // describe on enter: no hint
 		t.Errorf("hints %q", got)
 	}
 
@@ -213,7 +202,7 @@ func TestCommandsComeFromTheConfig(t *testing.T) {
 	for _, a := range m.actions() {
 		hints = append(hints, a.hint)
 	}
-	if got := strings.Join(hints, " "); got != "previ[o]us-logs [x] shell [d]escribe cop[y]" {
+	if got := strings.Join(hints, " "); got != "previ[o]us-logs [x] shell  cop[y]" {
 		t.Errorf("remapped hints %q", got)
 	}
 }
@@ -249,19 +238,39 @@ func TestSectionToggles(t *testing.T) {
 	pods := toggleResource{name: "pods"}
 	secrets := toggleResource{name: "secrets"}
 	m := &model{kinds: []resources.Resource{pods, secrets}, started: map[string]bool{"pods": true, "secrets": true}}
-	s := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")}
+	s := tea.KeyMsg{Type: tea.KeyF2}
 	m.pageKey(s)
 	if m.page.shown(secrets) || !m.page.shown(pods) {
-		t.Fatal("s hides only the secrets section")
+		t.Fatal("F2 hides only the second (secrets) section")
 	}
 	if m.started["secrets"] {
 		t.Fatal("hiding a section should stop it")
 	}
 	m.pageKey(s)
 	if !m.page.shown(secrets) {
-		t.Fatal("s again shows it again")
+		t.Fatal("F2 again shows it again")
 	}
 }
+
+// ` sorts the resource the selected row is in, and only that one.
+func TestSortSelectedResource(t *testing.T) {
+	row := func(k string) []resources.Row { return []resources.Row{{Key: k, Cells: []resources.Cell{{Text: k}}}} }
+	pods := sortable{toggleResource{name: "pods"}, row("a")}
+	secrets := sortable{toggleResource{name: "secrets"}, row("b")}
+	m := &model{kinds: []resources.Resource{pods, secrets}}
+	m.page.selected = "secrets/b"
+	m.pageKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("`")})
+	if _, ok := m.page.sorts["secrets"]; !ok || len(m.page.sorts) != 1 {
+		t.Fatalf("` sorts only the selected resource, got %v", m.page.sorts)
+	}
+}
+
+type sortable struct {
+	toggleResource
+	rows []resources.Row
+}
+
+func (s sortable) Rows() []resources.Row { return s.rows }
 
 // toggleResource is a minimal kind for toggle tests.
 type toggleResource struct{ name string }
@@ -274,7 +283,7 @@ func (r toggleResource) Ready() bool                       { return true }
 func (r toggleResource) Start(resources.Host) tea.Cmd      { return nil }
 func (r toggleResource) Stop()                             {}
 func (r toggleResource) Update(tea.Msg) tea.Cmd            { return nil }
-func (r toggleResource) Columns() []resources.Column       { return nil }
+func (r toggleResource) Columns() []resources.Column       { return []resources.Column{{Title: "NAME"}} }
 func (r toggleResource) Rows() []resources.Row             { return nil }
 func (r toggleResource) Empty() string                     { return "" }
 func (r toggleResource) Indicators() []resources.Indicator { return nil }
@@ -333,15 +342,84 @@ func TestWrapBreaksLongValues(t *testing.T) {
 	}
 }
 
-func TestViewerMasksSecretsUntilRevealed(t *testing.T) {
+func TestViewerShowsSecretValues(t *testing.T) {
 	s := &viewerScreen{v: &resources.Viewer{Title: "secret x"}, cancel: func() {}}
 	s.update(viewerLineMsg{s, resources.Line{Text: "password", Indent: 2}})
-	s.update(viewerLineMsg{s, resources.Line{Text: "hunter2", Indent: 4, Secret: true}})
-	if out := s.view(80, 10); strings.Contains(out, "hunter2") || !strings.Contains(out, "••••") {
-		t.Fatalf("value must be masked:\n%s", out)
+	s.update(viewerLineMsg{s, resources.Line{Text: "hunter2", Indent: 4}})
+	if out := s.view(80, 10); !strings.Contains(out, "hunter2") || strings.Contains(s.hints(), "reveal") {
+		t.Fatalf("values are shown straight away:\n%s", out)
 	}
-	s.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
-	if out := s.view(80, 10); !strings.Contains(out, "hunter2") {
-		t.Fatalf("r reveals it:\n%s", out)
+}
+
+func pageWith(width int, kinds ...resources.Resource) *model {
+	m := &model{kinds: kinds, started: map[string]bool{}, width: width, height: 20, info: Info{Refresh: time.Second}}
+	m.page.cfg = config.Default()
+	m.changes.rail.window = time.Minute
+	return m
+}
+
+func plainText(s string) string { return ansi.Strip(s) }
+
+// Scrolling back up to a section's first row brings its title and column
+// header back too.
+func TestScrollingUpShowsTheSectionTitle(t *testing.T) {
+	var rows []string
+	for i := range 40 {
+		rows = append(rows, fmt.Sprint("p", i))
+	}
+	m := pageWith(80, rowsKind{name: "pods", rows: rows})
+	m.View()
+	for range 40 {
+		m.moveSelection(1)
+		m.View()
+	}
+	for range 40 {
+		m.moveSelection(-1)
+		m.View()
+	}
+	if out := plainText(m.View()); !strings.Contains(out, "┌┐ pods ┌") {
+		t.Errorf("the title and header are scrolled off:\n%s", out)
+	}
+}
+
+// Header lines that do not fit wrap, and the page gives them the room.
+func TestHeaderWraps(t *testing.T) {
+	var kinds []resources.Resource
+	for _, n := range []string{"gitops", "deployments", "replicasets", "pods", "services", "ingressroutes"} {
+		kinds = append(kinds, rowsKind{name: n})
+	}
+	m := pageWith(50, kinds...)
+	if n := m.headerLines(); n < 4 {
+		t.Fatalf("at 50 columns the sections line should wrap, got %d header lines", n)
+	}
+	out := plainText(m.View())
+	if !strings.HasPrefix(out, "┌┐ kfs ┌┐ctx: ") {
+		t.Errorf("the header is a frame with kfs and the context in its top border:\n%s", out)
+	}
+	words := strings.Join(strings.Fields(out), " ")
+	for _, n := range []string{"F1 gitops", "F6 ingressroutes", "1 contexts"} {
+		if !strings.Contains(words, n) {
+			t.Errorf("%q is cut off:\n%s", n, out)
+		}
+	}
+	if lines := strings.Split(out, "\n"); len(lines) != m.height {
+		t.Errorf("the page is %d lines, want %d", len(lines), m.height)
+	}
+}
+
+func TestShade(t *testing.T) {
+	for _, tc := range []struct {
+		c    string
+		f    float64
+		want string
+	}{
+		{"#00e5ff", 1, "#00e5ff"},
+		{"#00e5ff", 0.5, "#007380"},
+		{"#808080", 3, "#ffffff"}, // brighter clamps
+		{"39", 0.5, "39"},         // ANSI numbers stay
+	} {
+		if got := string(shade(tc.c, tc.f)); got != tc.want {
+			t.Errorf("shade(%s, %v) = %s, want %s", tc.c, tc.f, got, tc.want)
+		}
 	}
 }

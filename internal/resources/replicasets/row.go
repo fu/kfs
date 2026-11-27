@@ -11,11 +11,11 @@ import (
 // What a replicaset row shows; old revisions scaled to zero are dimmed.
 var columns = []resources.Column{
 	{Title: "NAME", Middle: true, Shrink: true},
+	{Title: "READY", Right: true},
+	{Title: "STATUS"},
 	{Title: "REV", Right: true},
 	{Title: "DESIRED", Right: true},
 	{Title: "CURRENT", Right: true},
-	{Title: "READY", Right: true},
-	{Title: "STATUS"},
 	{Title: "AGE"},
 }
 
@@ -44,7 +44,7 @@ func (r *Resource) Rows() []resources.Row {
 		}
 		cells := map[string]resources.Cell{
 			"NAME":    {Text: s.Name, Tone: tone},
-			"REV":     {Text: s.Revision, Tone: resources.Dim},
+			"REV":     {Text: s.Revision},
 			"DESIRED": {Text: fmt.Sprint(s.Desired), Tone: tone},
 			"CURRENT": {Text: fmt.Sprint(s.Current), Tone: tone},
 			"READY":   {Text: fmt.Sprint(s.Ready), Tone: tone},

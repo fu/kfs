@@ -9,6 +9,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -34,10 +35,10 @@ import (
 	"github.com/fu/kfs/internal/resources/services"
 )
 
-// registry lists the kinds in display order. Each name's first letter (or
-// the key it names) toggles its section, so it must not clash with another
-// key of the page. A kind with commands of its own gets them here; the
-// header's commands line shows them after those every row has.
+// registry lists the kinds in display order. F1, F2, … toggle the sections
+// in the order shown (the config's resource_order); ` sorts the selected one.
+// A kind with commands of its own gets them here; the header's commands line
+// shows them after those every row has.
 func registry() []resources.Resource {
 	return []resources.Resource{
 		gitops.New(),
@@ -121,9 +122,9 @@ func Run(ctx context.Context, flags *genericclioptions.ConfigFlags, client *kube
 	// (a terminal that never answers would stall the start for seconds).
 	lipgloss.SetHasDarkBackground(true)
 	if info.Config == nil {
-		info.Config = &config.Config{} // nothing to restore, nothing saved
+		info.Config = &config.Config{Theme: config.DefaultTheme()} // nothing to restore, nothing saved
 	}
-	setPalette(info.Config.Colors)
+	setPalette(info.Config.Theme)
 
 	m := &model{ctx: ctx, flags: flags, client: client, info: info, kinds: ordered(info.Config, registry()), started: map[string]bool{}}
 	m.page.cfg = info.Config
@@ -292,7 +293,7 @@ func (m *model) View() string {
 		return "starting…"
 	}
 	if top := m.top(); top != nil {
-		h := max(1, m.height-headerLines-footerLines)
+		h := max(1, m.height-m.headerLines()-footerLines)
 		return m.headerView() + "\n" + fitLines(top.view(m.width, h), h) + "\n" + m.footer(top.hints())
 	}
 	return m.pageView()
@@ -337,11 +338,23 @@ func (m *model) Listed() []resources.Ref {
 	return m.listed
 }
 
-// toggleKey is the key that shows or hides a kind's section: the first
-// letter of its name, unless it names another one.
-func toggleKey(k resources.Resource) string {
-	if kk, ok := k.(resources.Keyed); ok {
-		return kk.Key()
+// sectionKey is the key that shows or hides the i-th section (in the
+// config's resource_order): F1, F2, … F12; none past that.
+func sectionKey(i int) string {
+	if i >= 12 {
+		return ""
 	}
-	return k.Name()[:1]
+	return fmt.Sprintf("f%d", i+1)
 }
+
+// keyLabel is how a key shows in the header: "F1" for f1.
+func keyLabel(key string) string {
+	var n int
+	if _, err := fmt.Sscanf(key, "f%d", &n); err != nil {
+		return key
+	}
+	return fmt.Sprintf("F%d", n)
+}
+
+// sortKey sorts the resource the selected row is in by its next column.
+const sortKey = "`"

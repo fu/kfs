@@ -44,16 +44,15 @@ ingress routes, configmaps and secrets, and a change log of everything that
 happens there — including the events from before you started.
 
 Pick the namespace with -n (default: the one you last used in this context,
-else the context's) and narrow it to one app with -l. Inside kfs, c / n / f
-switch context, namespace and filter; the first letter of a section (or the
-letter its name spells, e.g. i for services) shows or hides it. Colors,
-hidden sections and the last namespaces are kept in
-~/.config/kfs/config.yaml.
+else the context's) and narrow it to one app with -l. Inside kfs, 1 / 2 / 3
+switch context, namespace and filter; F1, F2, … show or hide the resources.
+Commands, hidden resources and the last namespaces are kept in
+~/.config/kfs/config.yaml, the colors in ~/.config/kfs/theme.yaml.
 
 Examples:
   kfs                       # the current namespace
   kfs -n shop -l app=web    # one app in namespace shop
-  kfs -n shop --once        # print the sections once and exit`,
+  kfs -n shop --once        # print the resources once and exit`,
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		Version:      version,
@@ -64,8 +63,8 @@ Examples:
 	configFlags.AddFlags(root.Flags())
 	root.Flags().StringVarP(&o.selector, "selector", "l", "", "Label selector to narrow everything to one app (e.g. app=web)")
 	root.Flags().DurationVar(&o.refresh, "refresh", 5*time.Second, "Metrics refresh interval")
-	root.Flags().BoolVar(&o.once, "once", false, "Print the sections once and exit (default when stdout is not a terminal)")
-	root.Flags().StringVar(&o.config, "config", config.Path(), "kfs config file (colors, hidden sections, last namespaces)")
+	root.Flags().BoolVar(&o.once, "once", false, "Print the resources once and exit (default when stdout is not a terminal)")
+	root.Flags().StringVar(&o.config, "config", config.Path(), "kfs config file (commands, hidden resources, last namespaces); theme.yaml next to it")
 	return root
 }
 
@@ -115,6 +114,8 @@ func run(ctx context.Context, o *options) error {
 		cfg = config.Default()
 	case cfg.ReadOnly():
 		info.Notice = "config " + o.config + " is from a newer kfs: read only"
+	case cfg.ThemeErr != nil:
+		info.Notice = "theme: " + cfg.ThemeErr.Error() + " (using default colors)"
 	}
 	info.Config = cfg
 	// Without -n, come back to the namespace last used in this context.

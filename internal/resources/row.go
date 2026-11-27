@@ -48,6 +48,7 @@ const (
 	Flash       // just changed
 	Fresh       // just added
 	Strong      // bold
+	Index       // the # column
 )
 
 // FlashFor is how long a changed cell stays highlighted.

@@ -23,7 +23,7 @@ func (r *Resource) Rows() []resources.Row {
 		s := r.rows[k]
 		out[i] = resources.Row{Key: k, Ref: resources.Ref{Kind: "Secret", Namespace: s.Namespace, Name: s.Name}, Cells: []resources.Cell{
 			{Text: s.Name},
-			{Text: s.Type, Tone: resources.Dim},
+			{Text: s.Type},
 			{Text: fmt.Sprint(s.Keys)},
 			{Text: kube.Age(s.Created), Tone: resources.Dim},
 		}}

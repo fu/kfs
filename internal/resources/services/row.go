@@ -10,11 +10,11 @@ import (
 // What a service row shows.
 var columns = []resources.Column{
 	{Title: "NAME", Middle: true, Shrink: true},
+	{Title: "STATUS"},
 	{Title: "TYPE"},
 	{Title: "CLUSTER-IP", Drop: 2},
 	{Title: "EXTERNAL-IP", Shrink: true},
 	{Title: "PORTS", Shrink: true},
-	{Title: "STATUS"},
 	{Title: "AGE"},
 }
 
@@ -36,7 +36,7 @@ func (r *Resource) Rows() []resources.Row {
 		cells := map[string]resources.Cell{
 			"NAME":        {Text: s.Name},
 			"TYPE":        {Text: s.Type},
-			"CLUSTER-IP":  {Text: s.ClusterIP, Tone: resources.Dim},
+			"CLUSTER-IP":  {Text: s.ClusterIP},
 			"EXTERNAL-IP": ext,
 			"PORTS":       {Text: s.Ports},
 			"STATUS":      {Text: "●", Tone: s.Light()},

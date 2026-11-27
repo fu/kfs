@@ -12,9 +12,9 @@ import (
 var columns = []resources.Column{
 	{Title: "NAME", Middle: true, Shrink: true},
 	{Title: "READY"},
+	{Title: "STATUS"},
 	{Title: "UP-TO-DATE", Right: true},
 	{Title: "AVAILABLE", Right: true},
-	{Title: "STATUS"},
 	{Title: "IMAGES", Shrink: true, Drop: 1},
 	{Title: "AGE"},
 }
@@ -48,7 +48,7 @@ func (r *Resource) Rows() []resources.Row {
 			"UP-TO-DATE": {Text: fmt.Sprint(d.Updated)},
 			"AVAILABLE":  {Text: fmt.Sprint(d.Available)},
 			"STATUS":     {Text: "●", Tone: d.Light()},
-			"IMAGES":     {Text: d.images(), Tone: resources.Dim},
+			"IMAGES":     {Text: d.images()},
 			"AGE":        {Text: kube.Age(d.Created), Tone: resources.Dim},
 		}
 		if d.Paused {

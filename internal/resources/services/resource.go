@@ -71,7 +71,6 @@ type rowState struct {
 }
 
 func (r *Resource) Name() string      { return "services" }
-func (r *Resource) Key() string       { return "i" } // s is secrets
 func (r *Resource) Tag() string       { return "svc" }
 func (r *Resource) Objects() []string { return []string{"Service"} }
 func (r *Resource) GVR() schema.GroupVersionResource {

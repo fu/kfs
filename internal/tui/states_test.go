@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/fu/kfs/internal/config"
 	"github.com/fu/kfs/internal/resources"
 	podcommands "github.com/fu/kfs/internal/resources/pods/commands"
@@ -36,15 +38,15 @@ func TestHiddenStatesLeaveTheTableButAreCounted(t *testing.T) {
 	if got := keys(m.rows(pods)); len(got) != 1 || got[0] != "a" {
 		t.Errorf("shown rows: %v", got)
 	}
-	if got := m.sectionTitle(pods); !strings.Contains(got, "pods 3 (+2 hidden)") {
-		t.Errorf("the section title should say what is hidden: %q", got)
+	if got := ansi.Strip(strings.Join(m.sectionStatus(pods), " ")); got != "3 (+2 hidden)" {
+		t.Errorf("the section's frame should say what is hidden: %q", got)
 	}
 	if strings.Contains(m.statusLine(), "pods") {
 		t.Errorf("the status line leaves the sections to their titles: %q", m.statusLine())
 	}
 
 	cfg.Status["pods"] = []string{} // only the "*" items: errors, hidden
-	if got := m.sectionTitle(pods); strings.Contains(got, "pods 3") || !strings.Contains(got, "pods (+2 hidden)") {
+	if got := ansi.Strip(strings.Join(m.sectionStatus(pods), " ")); got != "(+2 hidden)" {
 		t.Errorf("the config picks the items: %q", got)
 	}
 

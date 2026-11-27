@@ -1,0 +1,67 @@
+# kfs theme — the colors, next to config.yaml. The defaults are Catppuccin
+# Mocha (as btop's catppuccin_mocha theme); kfs leaves the terminal's own
+# background. kfs writes it on the first start and afterwards only adds
+# colors a newer kfs brings: edit away.
+#
+# Colors are "#rrggbb" (quoted: # starts a YAML comment) or an ANSI number
+# ("0"-"255"), which follows your terminal's theme instead.
+
+# The kfs badge in the header's top border.
+badge: "#89b4fa"
+
+# Text.
+text-heading: "#cdd6f4"   # section titles, column headers (bold)
+text-dim: "#585b70"       # secondary: AGE, placeholders, hints, times, hidden sections
+text-on-color: "#1e1e2e"  # on the badge and on a flashing cell
+text-menu: "#89b4fa"      # on the menu ground
+# Keys of what works everywhere: context, namespace, filter, the sections'
+# F-keys, the commands every row has (copy), the footer.
+key-global: "#89b4fa"
+# Keys of the selected row's own commands (pods: logs, shell, …).
+key-command: "#f5c2e7"
+# Ground of a shown section and of the open menu in the header.
+menu: "#45475a"
+# The # column.
+index: "#585b70"
+# Background of the selected row and of the rows linked to it.
+row-highlighted: "#45475a"
+row-referenced: "#313244"
+# Accents: context, namespace, filter, change-log tags, "watching".
+info: "#94e2d5"
+# Status lights and the cells that go with them.
+status-ok: "#a6e3a1"      # running, synced, healthy
+status-busy: "#fab387"    # on its way: pending, rolling out
+status-warn: "#f9e2af"    # worth a look: restarts, high usage
+status-failed: "#f38ba8"  # failing
+# Background of a cell that just changed.
+flash: "#f9e2af"
+
+# The frames: frame-color-kfs round the header, frame-color-<section> round
+# each section (its name and column headers in the top border, its status
+# at the bottom right), frame-color for a section not listed.
+frame-color: "#585b70"
+frame-color-kfs: "#89b4fa"
+frame-color-gitops: "#f5c2e7"
+frame-color-deployments: "#89b4fa"
+frame-color-replicasets: "#94e2d5"
+frame-color-pods: "#a6e3a1"
+frame-color-services: "#f9e2af"
+frame-color-ingressroutes: "#fab387"
+frame-color-configmaps: "#cdd6f4"
+frame-color-claims: "#bac2de"
+frame-color-volumes: "#bac2de"
+frame-color-secrets: "#f38ba8"
+
+# The rail, the change log's time line: a frame around the change log,
+# starting right after its title (now) and going round clockwise to the
+# top-left corner (rail.minutes ago in config.yaml). A slot fades from its
+# color towards black as it ages; rail-idle is the grey packets where
+# nothing happened.
+rail-ok: "#94e2d5"        # something changed, all fine
+rail-warn: "#fab387"      # a warning
+rail-failed: "#f38ba8"    # something failed
+rail-idle: "#585b70"
+rail-cursor: "#89b4fa"    # the arrow on a section's frame by the selected row
+# The "watching" dot and the bulbs on the frames by linked rows: they breathe from dark
+# to this color once per metrics refresh.
+pulse: "#94e2d5"

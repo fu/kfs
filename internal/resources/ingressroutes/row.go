@@ -12,10 +12,10 @@ import (
 // What an IngressRoute row shows.
 var columns = []resources.Column{
 	{Title: "NAME", Middle: true, Shrink: true},
+	{Title: "STATUS"},
 	{Title: "HOSTS", Shrink: true},
 	{Title: "ENTRYPOINTS", Drop: 1},
 	{Title: "ROUTES", Right: true},
-	{Title: "STATUS"},
 	{Title: "AGE"},
 }
 
@@ -34,7 +34,7 @@ func (r *Resource) Rows() []resources.Row {
 		cells := map[string]resources.Cell{
 			"NAME":        {Text: ir.Name},
 			"HOSTS":       hosts,
-			"ENTRYPOINTS": {Text: strings.Join(ir.EntryPoints, ","), Tone: resources.Dim},
+			"ENTRYPOINTS": {Text: strings.Join(ir.EntryPoints, ",")},
 			"ROUTES":      {Text: fmt.Sprint(ir.Routes)},
 			"STATUS":      {Text: "●", Tone: ir.Light()},
 			"AGE":         {Text: kube.Age(ir.Created), Tone: resources.Dim},

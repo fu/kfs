@@ -3,7 +3,7 @@
 //	watch.go     the secret watch (values dropped as they arrive)
 //	resource.go  state, change log
 //	row.go       what a row shows
-//	commands/    open (values fetched then, masked until revealed)
+//	commands/    extract (values fetched then, shown decoded)
 package secrets
 
 import (

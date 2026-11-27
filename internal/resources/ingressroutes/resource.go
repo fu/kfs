@@ -72,7 +72,6 @@ type rowState struct {
 }
 
 func (r *Resource) Name() string      { return "ingressroutes" }
-func (r *Resource) Key() string       { return "u" } // i is services
 func (r *Resource) Tag() string       { return "ir" }
 func (r *Resource) Objects() []string { return []string{"IngressRoute"} }
 func (r *Resource) Available() bool   { return r.detected && r.served }

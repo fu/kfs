@@ -112,20 +112,22 @@ _/     .      \/     /   \      \
 <pre class="term"><span class="dim">$</span> kfs                       <span class="dim"># the current namespace</span>
 <span class="dim">$</span> kfs -n shop               <span class="dim"># namespace shop</span>
 <span class="dim">$</span> kfs -n shop -l app=web    <span class="dim"># only one app in it</span>
-<span class="dim">$</span> kfs -n shop --once        <span class="dim"># print the sections once and exit</span></pre>
+<span class="dim">$</span> kfs -n shop --once        <span class="dim"># print the resources once and exit</span></pre>
         </section>
 
         <section>
           <h2><span class="no">05</span> Keys</h2>
-<pre class="term keys">[c] [n] [f]        context, namespace, filter
-[tab]              next section
-[up] [down]        move  (or the mouse wheel)
-[shift]+section    sort by the next column
-[d]                describe the row
-[l] [h] [w]        logs, shell, port-forward
+<pre class="term keys">[1] [2] [3]        context, namespace, filter
+[tab]              next resource
+[up] [down]        move
+[F1]…[F10]         show or hide a resource
+[`]                sort it by the next column
+[enter]            describe the row
+[y]                copy its name
+[l] [s] [f]        logs, shell, port-forward
 [q] [a]            scroll the change log
-[Q] [A]            move the divider
-[esc]              back, quit</pre>
+[+] [-]            move the divider
+[Q] [esc]          quit (esc: back)</pre>
         </section>
 
       </div>
@@ -153,7 +155,7 @@ o2  web-7d4b9c6f5-pq9vz  1/1  o  3m
               <p>The recording goes here<span class="cursor">_</span></p>
             </div>
           </figure>
-          <p class="caption">Select a row: what it touches lights up. The rail on the left is time &mdash; changes travel down it.</p>
+          <p class="caption">Select a row: what it touches lights up. The frame round the change log is time &mdash; changes travel round it.</p>
         </div>
       </div>
     </div>

@@ -56,7 +56,6 @@ type rowState struct {
 }
 
 func (r *Resource) Name() string      { return "claims" }
-func (r *Resource) Key() string       { return "m" } // c is contexts
 func (r *Resource) Tag() string       { return "pvc" }
 func (r *Resource) Objects() []string { return []string{"PersistentVolumeClaim"} }
 func (r *Resource) States() []string  { return []string{"bound", "pending", "lost"} }

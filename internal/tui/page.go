@@ -20,18 +20,16 @@ import (
 // config binds for its section are its keys.
 
 type page struct {
-	cfg      *config.Config // which sections and row states are hidden
-	selected string         // "<kind>/<row key>"
-	moved    bool           // the user moved the selection; until then it stays on the top row
-	offset   int            // first visible body line
-	jumpBuf  string
-	jumpAt   time.Time
+	cfg      *config.Config       // which sections and row states are hidden
+	selected string               // "<kind>/<row key>"
+	moved    bool                 // the user moved the selection; until then it stays on the top row
+	offset   int                  // first visible body line
 	grow     int                  // lines the change log got (Q) or gave (A) over its default height
 	sorts    map[string]sortState // per section: the column Shift+key sorted it to
 }
 
 func (p *page) reset() {
-	p.selected, p.moved, p.offset, p.jumpBuf = "", false, 0, ""
+	p.selected, p.moved, p.offset = "", false, 0
 	p.sorts = nil
 }
 
@@ -111,7 +109,8 @@ func (m *model) selection() (resources.Resource, string) {
 // action is a command bound to a key for the selected row.
 type action struct {
 	key  string
-	hint string // empty: bound but not shown (a second key, e.g. enter)
+	name string // the command
+	hint string // empty: bound but not shown (a second key, or enter)
 	do   func() resources.Step
 }
 
@@ -139,10 +138,12 @@ func (m *model) rowCommands() (every, own []action) {
 			if c.Enabled != nil && !c.Enabled(target) {
 				continue
 			}
-			for i, keyName := range m.page.cfg.CommandKeys(k.Name(), c.Name) {
-				a := action{key: keyName, do: func() resources.Step { return c.Run(target) }}
-				if i == 0 {
-					a.hint = commandHint(c.Name, keyName)
+			hinted := false
+			for _, keyName := range m.page.cfg.CommandKeys(k.Name(), c.Name) {
+				a := action{key: keyName, name: c.Name, do: func() resources.Step { return c.Run(target) }}
+				// enter is what a row does by default (describe): not worth a hint.
+				if !hinted && keyName != "enter" {
+					a.hint, hinted = commandHint(c.Name, keyName), true
 				}
 				out = append(out, a)
 			}
@@ -165,8 +166,27 @@ func (m *model) actions() []action {
 	return append(own, every...)
 }
 
+// commandItems are what the selected row can do, for the bottom of its
+// resource's frame: each command with its key lit in the word ("logs"),
+// those every row has and sorting in key-global, the kind's own in
+// key-command.
+func (m *model) commandItems() []string {
+	every, own := m.rowCommands()
+	var out []string
+	add := func(as []action, key lipgloss.Color) {
+		for _, a := range as {
+			if a.hint != "" {
+				out = append(out, marked(a.hint, plain, key))
+			}
+		}
+	}
+	add(own, commandKey)
+	add(every, globalKey)
+	return append(out, marked("[`] sort", plain, globalKey))
+}
+
 // commandHint shows a command with its key: the key's letter in the name
-// ("s[h]ell"), else before it ("[x] shell", "[enter] open").
+// ("[s]hell"), else before it ("[x] open", "[F1] pods").
 func commandHint(name, key string) string {
 	if len(key) == 1 {
 		if i := strings.Index(name, key); i >= 0 {
@@ -216,16 +236,16 @@ func (m *model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			return s.open(m)
 		}
 	}
-	for _, k := range m.kinds {
-		switch key {
-		case toggleKey(k):
+	for i, k := range m.kinds {
+		if key == sectionKey(i) {
 			return m.toggleSection(k)
-		case strings.ToUpper(toggleKey(k)): // Shift+<section key>
-			if m.page.shown(k) && k.Available() {
-				m.page.cycle(k.Name(), k.Columns())
-			}
-			return nil
 		}
+	}
+	if key == sortKey {
+		if k, _ := m.selection(); k != nil {
+			m.page.cycle(k.Name(), k.Columns())
+		}
+		return nil
 	}
 	for _, t := range tuiKeys() {
 		if t.matches(key) {
@@ -257,16 +277,6 @@ func (m *model) toggleSection(k resources.Resource) tea.Cmd {
 		m.Notice("config: " + err.Error())
 	}
 	return cmd
-}
-
-// jumpTo moves to row #n of the section the cursor is in, digit by digit.
-func (m *model) jumpTo(digit string) {
-	if k, _ := m.selection(); k != nil {
-		ks := keys(m.rows(k))
-		if n := typeNumber(&m.page.jumpBuf, &m.page.jumpAt, digit); n >= 1 && n <= len(ks) {
-			m.page.selected, m.page.moved = k.Name()+"/"+ks[n-1], true
-		}
-	}
 }
 
 // moveDivider moves the divider by delta lines (up: a taller change log).
@@ -319,32 +329,33 @@ func (m *model) applySavedPct() {
 	m.page.grow = avail*pct/100 - m.defaultChanges()
 }
 
-// The page from top to bottom: the header, the rail's first slot, the
-// sections, the change log's divider, the change log, the footer.
+// The page from top to bottom: the header, the sections, the change log in
+// its rail, the footer.
 const (
-	railSlotLines = 1
-	dividerLines  = 1
-	minBody       = 3 // the sections keep at least 3 lines
-	minChanges    = 2 // and the change log 2
+	changesFrame = 2 // the rail above and below the change log
+	minBody      = 3 // the sections keep at least 3 lines
+	minChanges   = 2 // and the change log 2
 )
 
 // maxChanges is the most lines the change log can take.
 func (m *model) maxChanges() int {
-	return m.height - headerLines - railSlotLines - dividerLines - footerLines - minBody
+	return m.height - m.headerLines() - changesFrame - footerLines - minBody
 }
 
 func (m *model) layout() layout {
 	l := layout{changes: max(minChanges, min(m.maxChanges(), m.defaultChanges()+m.page.grow))}
-	l.body = max(1, m.height-headerLines-railSlotLines-dividerLines-l.changes-footerLines)
+	l.body = max(1, m.height-m.headerLines()-changesFrame-l.changes-footerLines)
 	return l
 }
 
+// statusLine is the header frame's top border: the kfs badge, context,
+// namespace and filter, and at the right whether all sections are watching.
 func (m *model) statusLine() string {
-	filter := "filter " + dim.Render("none")
+	filter := "filter: " + dim.Render("none")
 	if m.info.Selector != "" {
-		filter = "filter " + cyan.Render(m.info.Selector)
+		filter = "filter: " + cyan.Render(m.info.Selector)
 	}
-	parts := []string{"ctx " + cyan.Render(m.info.Context), "ns " + cyan.Render(m.info.Namespace), filter}
+	left := []string{badge.Render("kfs"), "ctx: " + cyan.Render(m.info.Context), "ns: " + cyan.Render(m.info.Namespace), filter}
 	ready := true
 	for _, k := range m.sections() {
 		ready = ready && k.Ready()
@@ -353,13 +364,13 @@ func (m *model) statusLine() string {
 	if ready {
 		right = m.pulse() + " " + cyan.Render("watching")
 	}
-	return alignLR(logoCell(0)+joinParts(parts), right, m.width)
+	return frameBar(frameStyle("kfs"), left, []string{right}, m.width)
 }
 
-// sectionTitle is a section's heading: its name and the items the config
-// picks (its own indicators, and "hidden": rows hidden by state), those with
-// something to say.
-func (m *model) sectionTitle(k resources.Resource) string {
+// sectionStatus is what a section's frame shows at the bottom right: the
+// items the config picks (its own indicators, and "hidden": rows hidden by
+// state), those with something to say.
+func (m *model) sectionStatus(k resources.Resource) []string {
 	byName := map[string]resources.Indicator{}
 	for _, ind := range k.Indicators() {
 		byName[ind.Name] = ind
@@ -379,7 +390,7 @@ func (m *model) sectionTitle(k resources.Resource) string {
 			items = append(items, cells(cs))
 		}
 	}
-	return strings.Join(append([]string{header.Render(k.Name())}, items...), " ")
+	return items
 }
 
 func (m *model) pageView() string {
@@ -403,91 +414,86 @@ func (m *model) pageView() string {
 	}
 	links := linked(selRef, m.pageLinks())
 
-	// Every shown section's lines, remembering where the selected row is. The
-	// sections are drawn one column narrower: the rail runs left of them.
-	pw := m.width - railWidth
+	// Every shown section in its frame, remembering where the selected row
+	// is. The frame's left border points at the selected row and lights a
+	// bulb by every row linked to it (not by sub-rows: their row has it).
+	inner := m.width - 2
+	bulb := m.pulse()
 	var lines []string
-	marks := map[int]string{} // line → what the rail shows there instead of time
-	selLine := 0
+	selLine, selTop := 0, 0 // the selected row's line, and its section's top border
 	for _, k := range m.sections() {
 		rows := m.rows(k)
-		if len(lines) > 0 {
-			lines = append(lines, "")
-		}
-		lines = append(lines, clip(m.sectionTitle(k), pw))
+		c := frameStyle(k.Name())
+		top := len(lines)
+		var labels []label
+		var body []string
 		if len(rows) == 0 {
 			empty := k.Empty()
 			if n := m.hiddenRows(k); n > 0 {
-				empty = fmt.Sprintf("all %d hidden by state (f to change)", n)
+				empty = fmt.Sprintf("all %d hidden by state (3 to change)", n)
 			}
-			lines = append(lines, dim.Render("  "+empty))
-			continue
-		}
-		sel := ""
-		if k.Name() == selName {
-			sel = selKey
-			if i := slices.Index(keys(rows), selKey); i >= 0 {
-				selLine = len(lines) + 1 + i
+			body = []string{dim.Render(" " + empty)}
+		} else {
+			sel := ""
+			if k.Name() == selName {
+				sel, selTop = selKey, top
+				if i := slices.Index(keys(rows), selKey); i >= 0 {
+					selLine = top + 1 + i
+				}
 			}
+			labels, body = table{cols: m.sortCols(k), rows: rows, number: true, linked: links}.framed(sel, inner)
 		}
-		hdr, body := table{cols: m.sortCols(k), rows: rows, number: true, linked: links}.lines(sel, pw)
-		lines = append(lines, hdr)
-		// The rail points at the selected row and lights a bulb on every row
-		// linked to it (not on sub-rows: their row has the bulb).
-		for i, r := range rows {
-			switch {
-			case k.Name() == selName && r.Key == selKey:
-				marks[len(lines)+i] = railCursor
-			case r.Sub == "" && links[r.Ref]:
-				marks[len(lines)+i] = railLinked
+		lines = append(lines, frameTop(c, k.Name(), labels, m.width))
+		for i, line := range body {
+			left := c.Render("│")
+			if i < len(rows) {
+				switch r := rows[i]; {
+				case k.Name() == selName && r.Key == selKey:
+					left = railCursorStyle.Render(railCursor)
+				case r.Sub == "" && links[r.Ref]:
+					left = bulb
+				}
 			}
+			lines = append(lines, frameRow(c, left, line, m.width))
 		}
-		lines = append(lines, body...)
+		var cmds []string
+		if k.Name() == selName && len(rows) > 0 {
+			cmds = m.commandItems()
+		}
+		lines = append(lines, frameBottom(c, cmds, m.sectionStatus(k), m.width))
 	}
 	if len(lines) == 0 {
-		var letters []string
-		for _, k := range m.kinds {
-			letters = append(letters, toggleKey(k))
-		}
-		lines = append(lines, dim.Render("  all sections hidden: press "+strings.Join(letters, ", ")+" to show them"))
+		last := keyLabel(sectionKey(min(len(m.kinds), 12) - 1))
+		lines = append(lines, dim.Render("  all resources hidden: press F1–"+last+" to show them"))
 	}
 	m.page.offset = scrollOffset(selLine, m.page.offset, l.body, len(lines))
-
-	// The change log draws its divider; the rail is cut there, once the
-	// divider's title (and so how much of it the rail runs along) is known:
-	// one slot under the badge, one per section line, the corner, the run.
-	var rv railView
-	changes := m.changes.view(l.changes, m.width, func(title string) string {
-		rv = m.changes.rail.view(1+l.body, max(0, m.width-railWidth-lipgloss.Width(title)), time.Now())
-		return rv.corner + dim.Render(title) + rv.along
-	})
+	// Keep the selected section's top border (its name and column headers)
+	// in view while it fits with the selected row.
+	if selLine-selTop < l.body {
+		m.page.offset = min(m.page.offset, selTop)
+	}
 
 	var b strings.Builder
-	b.WriteString(m.headerView())
-	b.WriteString("\n" + rv.down[0] + "\n")
-	bulb := m.pulse()
-	for i := 0; i < l.body; i++ {
-		idx := m.page.offset + i
-		switch marks[idx] {
-		case railCursor:
-			b.WriteString(railCursorStyle.Render(railCursor))
-		case railLinked:
-			b.WriteString(bulb)
-		default:
-			b.WriteString(rv.down[1+i])
-		}
-		if idx < len(lines) {
+	b.WriteString(m.headerView() + "\n")
+	for i := range l.body {
+		if idx := m.page.offset + i; idx < len(lines) {
 			b.WriteString(lines[idx])
 		}
 		b.WriteByte('\n')
 	}
-	b.WriteString(changes)
 
-	keys := tuiHints()
-	if m.page.jumpBuf != "" && time.Since(m.page.jumpAt) < jumpWindow {
-		keys = "go to #[" + m.page.jumpBuf + "]  " + keys
+	// The change log, framed by the rail: it starts right after the title.
+	title, entries := m.changes.body(l.changes, max(1, m.width-2))
+	title = header.Render(title)
+	rf := m.changes.rail.frame(m.width, l.changes, lipgloss.Width(title), time.Now())
+	b.WriteString(rf.topLeft + title + rf.top + "\n")
+	for i, e := range entries {
+		e = clip(e, max(0, m.width-2))
+		b.WriteString(rf.left[i] + e + strings.Repeat(" ", max(0, m.width-2-lipgloss.Width(e))) + rf.right[i] + "\n")
 	}
-	b.WriteString(m.footer(hints(keys)))
+	b.WriteString(rf.bottom + "\n")
+
+	b.WriteString(m.footer(hints(tuiHints())))
 	return b.String()
 }
 
@@ -502,29 +508,5 @@ func (m *model) pulse() string {
 	}
 	phase := math.Mod(since, period) / period
 	k := (1 + math.Cos(2*math.Pi*phase)) / 2 // 1 at a refresh → 0 → 1
-	mix := func(from, to float64) int { return int(from + (to-from)*k) }
-	color := fmt.Sprintf("#%02x%02x%02x", mix(0x0b, 0x00), mix(0x4f, 0xe5), mix(0x5c, 0xff))
-	return lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render("●")
+	return lipgloss.NewStyle().Foreground(shade(string(pulseColor), 0.35+0.65*k)).Render("●")
 }
-
-// ---- jump to #n ------------------------------------------------------------------
-
-const jumpWindow = 1500 * time.Millisecond
-
-// typeNumber adds a typed digit to buf and returns the number typed so far;
-// digits typed within jumpWindow of each other form one number.
-func typeNumber(buf *string, at *time.Time, digit string) int {
-	if time.Since(*at) > jumpWindow {
-		*buf = ""
-	}
-	if *buf == "" && digit == "0" {
-		return 0
-	}
-	*buf += digit
-	*at = time.Now()
-	var n int
-	fmt.Sscan(*buf, &n)
-	return n
-}
-
-func isDigit(key string) bool { return len(key) == 1 && key[0] >= '0' && key[0] <= '9' }

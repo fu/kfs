@@ -46,5 +46,3 @@ func TestTabCyclesSections(t *testing.T) {
 		t.Errorf("shift+tab: at %q", m.page.selected)
 	}
 }
-
-

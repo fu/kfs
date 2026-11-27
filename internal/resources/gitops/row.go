@@ -9,15 +9,16 @@ import (
 	"github.com/fu/kfs/internal/resources"
 )
 
-// What an app row shows. PARENT is the app that deploys this one, lit by the
-// worst light up that chain, so a green app under a broken parent does not
-// look fine. Flux mixes Kustomizations and HelmReleases, so it gets a KIND.
-// MANAGED is how many objects the app deploys.
+// What an app row shows. PARENT is the app that deploys this one; CHAIN is
+// the worst light up that chain, so a green app under a broken parent does
+// not look fine. Flux mixes Kustomizations and HelmReleases, so it gets a
+// KIND. MANAGED is how many objects the app deploys.
 func (r *Resource) Columns() []resources.Column {
 	cols := []resources.Column{
-		{Title: "SYNC"}, {Title: "HEALTH"},
 		{Title: "NAME", Middle: true},
+		{Title: "SYNC"}, {Title: "HEALTH"},
 		{Title: "DEST"},
+		{Title: "CHAIN"},
 		{Title: "PARENT", Middle: true, Shrink: true},
 		{Title: "SOURCE", Middle: true, Shrink: true},
 		{Title: "MANAGED", Right: true},
@@ -25,7 +26,7 @@ func (r *Resource) Columns() []resources.Column {
 		{Title: "SYNCED"},
 	}
 	if r.engine == Flux {
-		cols = slices.Insert(cols, 2, resources.Column{Title: "KIND"})
+		cols = slices.Insert(cols, 3, resources.Column{Title: "KIND"})
 	}
 	return cols
 }
@@ -50,23 +51,23 @@ func (r *Resource) Rows() []resources.Row {
 		if !a.SyncedAt.IsZero() {
 			synced.Text = kube.Age(a.SyncedAt)
 		}
-		var parent resources.Cell
+		var chain, parent resources.Cell
 		if p, ok := parents[k]; ok {
-			parent = resources.Cell{Text: "● " + apps[p].Name, Tone: resources.Light(int(ChainLight(k, apps, parents)))}
+			chain = resources.Cell{Text: "●", Tone: resources.Light(int(ChainLight(k, apps, parents)))}
+			parent = resources.Cell{Text: apps[p].Name}
 		}
-		managed := resources.Cell{Text: fmt.Sprint(len(a.Manages)), Tone: resources.Dim}
 		cells := []resources.Cell{
-			sync, health,
 			{Text: a.Name},
-			{Text: a.DestNS, Tone: resources.Dim},
-			parent,
-			{Text: a.Source, Tone: resources.Dim},
-			managed,
-			{Text: a.Revision, Tone: resources.Dim},
+			sync, health,
+			{Text: a.DestNS},
+			chain, parent,
+			{Text: a.Source},
+			{Text: fmt.Sprint(len(a.Manages))},
+			{Text: a.Revision},
 			synced,
 		}
 		if r.engine == Flux {
-			cells = slices.Insert(cells, 2, resources.Cell{Text: a.Kind, Tone: resources.Dim})
+			cells = slices.Insert(cells, 3, resources.Cell{Text: a.Kind})
 		}
 		out = append(out, resources.Row{Key: k, Ref: a.ref(), Cells: cells, Struck: !row.deletedAt.IsZero()})
 	}

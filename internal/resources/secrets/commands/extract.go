@@ -1,4 +1,4 @@
-// Package commands are what a secret row can do: open.
+// Package commands are what a secret row can do: extract.
 package commands
 
 import (
@@ -14,12 +14,11 @@ import (
 )
 
 // All are the secrets' commands.
-func All() []resources.Command { return []resources.Command{Open} }
+func All() []resources.Command { return []resources.Command{Extract} }
 
-// Open shows a secret's keys; the values are fetched now and stay masked
-// until revealed with r.
-var Open = resources.Command{
-	Name: "open",
+// Extract shows a secret's keys and their decoded values, fetched now.
+var Extract = resources.Command{
+	Name: "extract",
 	Run: func(t resources.Target) resources.Step {
 		r, ok := t.Kind.(*secrets.Resource)
 		if !ok {
@@ -46,7 +45,7 @@ var Open = resources.Command{
 	},
 }
 
-// lines lays out the keys, each with its value masked as a secret line.
+// lines lays out the keys, each with its decoded value.
 func lines(data map[string][]byte, emit func(resources.Line)) {
 	keys := make([]string, 0, len(data))
 	for k := range data {
@@ -62,7 +61,7 @@ func lines(data map[string][]byte, emit func(resources.Line)) {
 		case len(v) == 0:
 			emit(resources.Line{Text: "(empty)", Tone: resources.Dim, Indent: 4})
 		default:
-			emit(resources.Line{Text: strings.TrimRight(string(v), "\n"), Indent: 4, Secret: true})
+			emit(resources.Line{Text: strings.TrimRight(string(v), "\n"), Indent: 4})
 		}
 	}
 	if len(keys) == 0 {

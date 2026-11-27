@@ -148,8 +148,10 @@ func TestRailSkipsHiddenChanges(t *testing.T) {
 func TestRailPatternWalks(t *testing.T) {
 	r := rail{window: 10 * time.Minute}
 	now := time.Unix(1000, 0)
-	before := []rune(ansi.Strip(r.view(0, 60, now).along))
-	after := []rune(ansi.Strip(r.view(0, 60, now.Add(railFlow)).along))
+	// The top run after the title (the last cell is the corner).
+	before := []rune(ansi.Strip(r.frame(70, 0, 8, now).top))
+	after := []rune(ansi.Strip(r.frame(70, 0, 8, now.Add(railFlow)).top))
+	before, after = before[:len(before)-1], after[:len(after)-1]
 	if string(after[1:]) != string(before[:len(before)-1]) {
 		t.Errorf("pattern did not move on by one:\n%s\n%s", string(before), string(after))
 	}
@@ -181,12 +183,14 @@ func TestRailChangesFade(t *testing.T) {
 	r := rail{window: 100 * time.Second}
 	r.mark(now, railGood, nil)
 	r.mark(now.Add(-98*time.Second), railGood, nil)
-	v := r.view(9, 90, now) // 100 slots
-	if got := ansi.Strip(v.down[0]); got != "┃" {
+	// 18 along the top, the corner, 20 down, the corner, 28 along the
+	// bottom, the corner, 20 up, the corner: 90 slots; -98s is slot 88,
+	// the left edge's top.
+	f := r.frame(30, 20, 10, now)
+	if got := string([]rune(ansi.Strip(f.top))[0]); got != "━" {
 		t.Errorf("fresh change: %q", got)
 	}
-	along := []rune(ansi.Strip(v.along))
-	if got := string(along[len(along)-2]); got != "·" {
+	if got := ansi.Strip(f.left[0]); got != "." {
 		t.Errorf("old change: %q", got)
 	}
 }
@@ -220,8 +224,11 @@ func TestChangeLevels(t *testing.T) {
 
 func TestRailViewShape(t *testing.T) {
 	r := rail{window: time.Minute}
-	v := r.view(4, 30, time.Now())
-	if len(v.down) != 4 || lipgloss.Width(v.corner) != 1 || lipgloss.Width(v.along) != 30 {
-		t.Errorf("down %d, corner width %d, along width %d", len(v.down), lipgloss.Width(v.corner), lipgloss.Width(v.along))
+	f := r.frame(40, 4, 12, time.Now())
+	if w := lipgloss.Width(f.topLeft) + 12 + lipgloss.Width(f.top); w != 40 {
+		t.Errorf("top is %d wide, want 40", w)
+	}
+	if len(f.left) != 4 || len(f.right) != 4 || lipgloss.Width(f.bottom) != 40 {
+		t.Errorf("left %d, right %d, bottom width %d", len(f.left), len(f.right), lipgloss.Width(f.bottom))
 	}
 }

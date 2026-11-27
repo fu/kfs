@@ -1,6 +1,7 @@
-// Package config is kfs' YAML file, ~/.config/kfs/config.yaml: the colors,
-// and the state kfs comes back to (hidden sections and rows, the last
-// namespace per context). The defaults are default.yaml, compiled in.
+// Package config is kfs' YAML files in ~/.config/kfs: config.yaml, the
+// commands and the state kfs comes back to (hidden sections and rows, the
+// last namespace per context), and theme.yaml, the colors. The defaults are
+// default.yaml and theme.yaml, compiled in.
 package config
 
 import (
@@ -25,12 +26,36 @@ import (
 //	1  version, sections, resource_order, hide, commands, status, layout,
 //	   rail, namespaces, colors
 //	2  commands "*": copy on y
-const Version = 2
+//	3  colors move to theme.yaml; keys like k9s: describe on enter, pods
+//	   shell s, forward f, logs l only, secrets open x
+//	4  secrets: open is now extract (values shown straight away)
+const Version = 4
 
 // upgrades bring a file from one version to the next: upgrades[0] takes a
 // version 1 file to 2. Each changes only what the user has not set.
 var upgrades = []func(c *Config){
 	func(c *Config) { c.offerCommand("*", "copy", "y") },
+	func(c *Config) {
+		c.rebind("*", "describe", "d", "enter")
+		c.rebind("pods", "logs", "l enter", "l")
+		c.rebind("secrets", "open", "enter", "x") // before shell takes s
+		c.rebind("pods", "shell", "h", "s")
+		c.rebind("pods", "forward", "w", "f")
+	},
+	func(c *Config) { c.rename("secrets", "open", "extract") },
+}
+
+// rename gives a section's command its new name, on the same keys.
+func (c *Config) rename(section, from, to string) {
+	cmds := c.Commands[section]
+	keys, ok := cmds[from]
+	if !ok {
+		return
+	}
+	delete(cmds, from)
+	if _, set := cmds[to]; !set {
+		cmds[to] = keys
+	}
 }
 
 //go:embed default.yaml
@@ -56,7 +81,12 @@ type Config struct {
 	Rail Rail `yaml:"rail"`
 	// Namespaces is the last namespace per context, used when -n is not given.
 	Namespaces map[string]string `yaml:"namespaces,omitempty"`
-	Colors     Colors            `yaml:"colors"`
+	// Colors are a version 2 file's colors, moved to theme.yaml on load.
+	Colors *legacyColors `yaml:"colors,omitempty"`
+	// Theme is theme.yaml, next to the file; ThemeErr says why it is the
+	// default instead.
+	Theme    Theme `yaml:"-"`
+	ThemeErr error `yaml:"-"`
 
 	path     string
 	readOnly bool // written by a newer kfs: never overwrite it
@@ -86,28 +116,14 @@ func (c *Config) RailWindow() time.Duration {
 	return time.Duration(c.Rail.Minutes) * time.Minute
 }
 
-// Colors are "#rrggbb" or ANSI numbers ("0"–"255").
-type Colors struct {
-	Good     string `yaml:"good"`
-	Busy     string `yaml:"busy"`
-	Warn     string `yaml:"warn"`
-	Bad      string `yaml:"bad"`
-	Info     string `yaml:"info"`
-	Flash    string `yaml:"flash"`
-	Selected string `yaml:"selected"`
-	Linked   string `yaml:"linked"`
-	Menu     string `yaml:"menu"`
-}
-
-// Defaults are the colors of default.yaml.
-var Defaults = Default().Colors
-
-// Default returns the built-in config (default.yaml); it is not saved.
+// Default returns the built-in config (default.yaml, theme.yaml); it is
+// not saved.
 func Default() *Config {
 	c := &Config{}
 	if err := yaml.Unmarshal(defaultYAML, c); err != nil {
 		panic("config: default.yaml: " + err.Error())
 	}
+	c.Theme = DefaultTheme()
 	return c
 }
 
@@ -122,9 +138,10 @@ func Path() string {
 	return filepath.Join(dir, "kfs", "config.yaml")
 }
 
-// Load reads the config at path. A missing file starts as default.yaml (and
-// is written, comments and all); keys missing from a file take their
-// defaults.
+// Load reads the config at path and the theme next to it. A missing file
+// starts as default.yaml / theme.yaml (and is written, comments and all);
+// keys missing from a file take their defaults. A broken theme leaves the
+// default colors (and ThemeErr).
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -142,6 +159,10 @@ func Load(path string) (*Config, error) {
 	}
 	upgraded := c.preflight()
 	c.fill(Default())
+	c.Theme, c.ThemeErr = LoadTheme(ThemePath(path), c.Colors)
+	if c.Colors != nil && c.ThemeErr == nil && !c.readOnly {
+		c.Colors, upgraded = nil, true
+	}
 	if upgraded {
 		_ = c.Save() // kfs runs on the upgraded config even if it cannot write it
 	}
@@ -186,6 +207,22 @@ func (c *Config) offerCommand(section, command, key string) {
 	cmds[command] = key
 }
 
+// rebind moves a section's command from key from to key to, if the file
+// still has it on from (the old default) and no other command of the
+// section has to.
+func (c *Config) rebind(section, command, from, to string) {
+	cmds := c.Commands[section]
+	if cmds == nil || cmds[command] != from {
+		return
+	}
+	for name, keys := range cmds {
+		if name != command && slices.ContainsFunc(strings.Fields(to), func(k string) bool { return slices.Contains(strings.Fields(keys), k) }) {
+			return
+		}
+	}
+	cmds[command] = to
+}
+
 // fill gives keys the file does not have their defaults. A section missing
 // from commands gets its default commands (so a new section brings its
 // own); "pods: {}" means none.
@@ -217,18 +254,6 @@ func (c *Config) fill(d *Config) {
 	}
 	if c.Rail.Minutes == 0 {
 		c.Rail.Minutes = d.Rail.Minutes
-	}
-	for _, f := range []struct {
-		v *string
-		d string
-	}{
-		{&c.Colors.Good, d.Colors.Good}, {&c.Colors.Busy, d.Colors.Busy}, {&c.Colors.Warn, d.Colors.Warn},
-		{&c.Colors.Bad, d.Colors.Bad}, {&c.Colors.Info, d.Colors.Info}, {&c.Colors.Flash, d.Colors.Flash},
-		{&c.Colors.Selected, d.Colors.Selected}, {&c.Colors.Linked, d.Colors.Linked}, {&c.Colors.Menu, d.Colors.Menu},
-	} {
-		if *f.v == "" {
-			*f.v = f.d
-		}
 	}
 }
 

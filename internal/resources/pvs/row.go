@@ -36,8 +36,8 @@ func (r *Resource) Rows() []resources.Row {
 			"STATUS":   status,
 			"CLAIM":    {Text: v.Claim},
 			"CAPACITY": {Text: v.Capacity},
-			"RECLAIM":  {Text: v.Reclaim, Tone: resources.Dim},
-			"CLASS":    {Text: v.Class, Tone: resources.Dim},
+			"RECLAIM":  {Text: v.Reclaim},
+			"CLASS":    {Text: v.Class},
 			"AGE":      {Text: kube.Age(v.Created), Tone: resources.Dim},
 		}
 		if !rs.addedAt.IsZero() && now.Sub(rs.addedAt) < resources.FlashFor {

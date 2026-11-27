@@ -49,8 +49,7 @@ type Viewer struct {
 type Line struct {
 	Text   string
 	Tone   Tone
-	Indent int  // of wrapped and further lines
-	Secret bool // masked until revealed with r
+	Indent int // of wrapped and further lines
 }
 
 // Exec hands the terminal to an interactive program, e.g. a shell.

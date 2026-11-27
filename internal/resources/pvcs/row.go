@@ -33,10 +33,10 @@ func (r *Resource) Rows() []resources.Row {
 		cells := map[string]resources.Cell{
 			"NAME":     {Text: c.Name},
 			"STATUS":   status,
-			"VOLUME":   {Text: c.Volume, Tone: resources.Dim},
+			"VOLUME":   {Text: c.Volume},
 			"CAPACITY": {Text: c.Capacity},
-			"ACCESS":   {Text: c.Access, Tone: resources.Dim},
-			"CLASS":    {Text: c.Class, Tone: resources.Dim},
+			"ACCESS":   {Text: c.Access},
+			"CLASS":    {Text: c.Class},
 			"AGE":      {Text: kube.Age(c.Created), Tone: resources.Dim},
 		}
 		if !rs.addedAt.IsZero() && now.Sub(rs.addedAt) < resources.FlashFor {

@@ -12,7 +12,7 @@ import (
 
 // The viewer screen: text from a Viewer step, streamed (logs: following the
 // newest line until scrolled, like "kubectl logs -f") or fetched once (a
-// secret: values masked until revealed with r).
+// secret's values, describe).
 
 const maxViewerLines = 10000
 
@@ -31,8 +31,6 @@ type viewerScreen struct {
 	v       *resources.Viewer
 	cancel  context.CancelFunc
 	lines   []resources.Line
-	secrets bool // some lines are masked
-	reveal  bool
 	follow  bool // stick to the newest line
 	top     int  // first line shown when not following
 	tailTop int  // first line shown when following (from the last render)
@@ -57,13 +55,6 @@ func (m *model) openViewer(v *resources.Viewer) tea.Cmd {
 
 func (s *viewerScreen) hints() string {
 	h := "[esc] back"
-	if s.secrets {
-		if s.reveal {
-			h = "hide [r]  " + h
-		} else {
-			h = "[r]eveal  " + h
-		}
-	}
 	if s.v.Live {
 		h = "[f]ollow  " + h
 	}
@@ -75,7 +66,6 @@ func (s *viewerScreen) update(msg tea.Msg) (tea.Cmd, bool) {
 	case viewerLineMsg:
 		if msg.s == s {
 			s.lines = append(s.lines, msg.line)
-			s.secrets = s.secrets || msg.line.Secret
 			if over := len(s.lines) - maxViewerLines; over > 0 {
 				s.lines = s.lines[over:]
 				s.top = max(0, s.top-over)
@@ -90,8 +80,6 @@ func (s *viewerScreen) update(msg tea.Msg) (tea.Cmd, bool) {
 		case "esc":
 			s.cancel()
 			return nil, true
-		case "r":
-			s.reveal = !s.reveal
 		case "up", "k":
 			s.scroll(-1)
 		case "down", "j":
@@ -119,14 +107,10 @@ func (s *viewerScreen) scroll(delta int) {
 	}
 }
 
-// wrapLine renders one line to screen lines: masked, split, wrapped.
+// wrapLine renders one line to screen lines: split, wrapped.
 func (s *viewerScreen) wrapLine(l resources.Line, width int) []string {
-	text := l.Text
-	if l.Secret && !s.reveal {
-		text = "••••••••"
-	}
 	var out []string
-	for _, part := range strings.Split(text, "\n") {
+	for _, part := range strings.Split(l.Text, "\n") {
 		for _, w := range wrap(part, width, l.Indent, l.Indent) {
 			out = append(out, style(l.Tone).Render(w))
 		}

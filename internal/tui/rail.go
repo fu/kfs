@@ -5,39 +5,35 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/fu/kfs/internal/config"
 )
 
-// The rail is a time line. It starts under the kfs badge, runs down the left
-// edge of the sections, turns at the divider and runs along it to the right
-// edge: top-left is now, the far right end is `rail.minutes` ago (config).
+// The rail is a time line framing the change log. It starts right after
+// the change log's title (now), runs along the top to the right, down the
+// right edge, back along the bottom, up the left edge and ends in the
+// top-left corner: `rail.minutes` ago (config).
 //
 // The rail keeps no slots, only what happened and when (railEvent). Every
-// frame it is cut afresh into as many slots as the window has room for, each
+// frame it is cut afresh into as many slots as the frame has room for, each
 // slot covering window/slots of time — so everything walks one slot further
-// every window/slots, and a bigger window simply shows the same time finer:
-// an alert burst that fills one slot on a small screen may fill two on a
-// large one.
+// every window/slots, and a bigger window simply shows the same time finer.
 //
 // A slot where something changed is cyan when all was fine, amber for a
 // warning, red for something failing (the worst change in it wins), and it
 // fades as it travels: bright and solid near now, then thinner, then dotted
-// (┃ │ : .) towards the far end; a busy slot stays one step brighter. Where
-// nothing happened the rail is grey packets that swell and fade, with gaps
-// between them (". : │ │ : .   . : ."). They flow on a steady beat of their
-// own, faster than the changes: a new piece appears right under the badge
-// every railFlow and the rest move on by one, so the rail never stands still.
+// towards the far end; a busy slot stays one step brighter. Where nothing
+// happened the rail is grey packets that swell and fade, with gaps between
+// them. They flow on a steady beat of their own, faster than the changes: a
+// new piece appears right after the title every railFlow and the rest move
+// on by one, so the rail never stands still.
 
-// railWidth is the column the rail takes left of the sections.
-const railWidth = 1
-
-// Where the rail passes the selected row it shows an arrow instead of time,
-// and by every row linked to it a bulb breathing with the "watching" dot.
+// On a section's frame, by the selected row: an arrow; by every row linked
+// to it: a bulb breathing with the "watching" dot.
 const (
 	railCursor = "▶"
 	railLinked = "●"
 )
-
-var railCursorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00e5ff")).Bold(true)
 
 // railBusy is how many changes in one slot keep it one fade step brighter.
 const railBusy = 3
@@ -50,20 +46,46 @@ type railGlyphs struct {
 }
 
 var (
-	railDown   = railGlyphs{fade: [4]string{"┃", "│", ":", "."}, bg: [4]string{" ", ".", ":", "│"}}
-	railCorner = railGlyphs{fade: [4]string{"┗", "╰", "╰", "╰"}, bg: [4]string{"╰", "╰", "╰", "╰"}}
-	railAlong  = railGlyphs{fade: [4]string{"━", "─", "┄", "·"}, bg: [4]string{" ", "·", "╌", "─"}}
+	railDown        = railGlyphs{fade: [4]string{"┃", "│", ":", "."}, bg: [4]string{" ", ".", ":", "│"}}
+	railAlong       = railGlyphs{fade: [4]string{"━", "─", "┄", "·"}, bg: [4]string{" ", "·", "╌", "─"}}
+	railTopRight    = corner("┓", "╮")
+	railBottomRight = corner("┛", "╯")
+	railBottomLeft  = corner("┗", "╰")
+	railTopLeft     = corner("┏", "╭")
 )
 
-// The fade steps' colors by level, and the packets' greys by height.
+// corner is a corner's glyphs: heavy while fresh, else always drawn.
+func corner(fresh, other string) railGlyphs {
+	return railGlyphs{fade: [4]string{fresh, other, other, other}, bg: [4]string{other, other, other, other}}
+}
+
+// The fade steps' colors by level, the packets' greys by height, and the
+// cursor: from the theme (setRailPalette).
 var (
-	railColors = map[railLevel][4]lipgloss.Style{
-		railGood:  fadeStyles("#00e5ff", "#00afc8", "#1a7f8e", "#0f5560"),
-		railWarn:  fadeStyles("#ffaf00", "#d79000", "#a06c00", "#6e4b00"),
-		railError: fadeStyles("#ff3b3b", "#d23232", "#9e2a2a", "#6e2222"),
-	}
-	railBg = fadeStyles("#4e4e4e", "#444444", "#4e4e4e", "#5f5f5f")
+	railColors      map[railLevel][4]lipgloss.Style
+	railBg          [4]lipgloss.Style
+	railCursorStyle lipgloss.Style
 )
+
+// setRailPalette shades the theme's rail colors: each level fades towards
+// black as it ages; the idle packets are greys around rail-idle.
+func setRailPalette(t config.Theme) {
+	fade := func(c string, fs ...float64) [4]lipgloss.Style {
+		var out [4]lipgloss.Style
+		for i, f := range fs {
+			out[i] = lipgloss.NewStyle().Foreground(shade(c, f))
+		}
+		return out
+	}
+	steps := []float64{1, 0.78, 0.55, 0.38}
+	railColors = map[railLevel][4]lipgloss.Style{
+		railGood:  fade(t.RailOK, steps...),
+		railWarn:  fade(t.RailWarn, steps...),
+		railError: fade(t.RailFailed, steps...),
+	}
+	railBg = fade(t.RailIdle, 0.82, 0.71, 0.82, 1)
+	railCursorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color(t.RailCursor)).Bold(true)
+}
 
 // railLevel is how a change reads on the rail; within a slot the highest
 // wins: red over amber over cyan.
@@ -89,14 +111,6 @@ const (
 	railBlock  = 12
 	railPacket = 9
 )
-
-func fadeStyles(colors ...string) [4]lipgloss.Style {
-	var out [4]lipgloss.Style
-	for i, c := range colors {
-		out[i] = lipgloss.NewStyle().Foreground(lipgloss.Color(c))
-	}
-	return out
-}
 
 // railEvent is one change: when, how it reads, and whether it (still)
 // belongs on the page, like its change-log entry. at is where it sits on the
@@ -159,13 +173,13 @@ func (r *rail) slots(n int, now time.Time) []railSlot {
 	return out
 }
 
-// railView is the rail cut for the page: a glyph for each row from under the
-// badge down to the divider, the corner where it turns, and the run along the
-// divider (after the change log's title).
-type railView struct {
-	down   []string
-	corner string
-	along  string
+// railFrame is the rail cut around the change log: the top-left corner
+// (the oldest slot), the run from after the title to the top-right corner,
+// the right and left edges top to bottom, and the bottom line.
+type railFrame struct {
+	topLeft, top string
+	left, right  []string
+	bottom       string
 }
 
 // span is the time the whole rail covers.
@@ -176,28 +190,45 @@ func (r *rail) span() time.Duration {
 	return r.window
 }
 
-// view cuts the rail into rows slots down, the corner and along slots along.
-func (r *rail) view(rows, along int, now time.Time) railView {
-	n := rows + 1 + along
+// frame cuts the rail around a box width wide with rows lines inside and a
+// title title cells wide after the top-left corner.
+func (r *rail) frame(width, rows, title int, now time.Time) railFrame {
+	top, bottom := max(0, width-2-title), max(0, width-2)
+	n := top + 1 + rows + 1 + bottom + 1 + rows + 1
 	s := r.slots(n, now)
 	// The grey packets flow on their own steady beat: slot i shows the
-	// piece born i beats ago, so a new piece appears under the badge every
+	// piece born i beats ago, so a new piece appears after the title every
 	// railFlow and the rest move on by one.
 	first := now.UnixNano() / int64(railFlow)
-	draw := func(i int, g railGlyphs) string {
-		return s[i].glyph(g, i, n, first-int64(i))
+	i := 0
+	next := func(g railGlyphs) string {
+		out := s[i].glyph(g, i, n, first-int64(i))
+		i++
+		return out
 	}
-	v := railView{down: make([]string, rows)}
-	for i := 0; i < rows; i++ {
-		v.down[i] = draw(i, railDown)
-	}
-	v.corner = draw(rows, railCorner)
+	var f railFrame
 	var b strings.Builder
-	for i := rows + 1; i < n; i++ {
-		b.WriteString(draw(i, railAlong))
+	for range top {
+		b.WriteString(next(railAlong))
 	}
-	v.along = b.String()
-	return v
+	b.WriteString(next(railTopRight))
+	f.top = b.String()
+	f.right = make([]string, rows)
+	for j := range rows {
+		f.right[j] = next(railDown)
+	}
+	br := next(railBottomRight)
+	along := make([]string, bottom)
+	for j := bottom - 1; j >= 0; j-- {
+		along[j] = next(railAlong)
+	}
+	f.bottom = next(railBottomLeft) + strings.Join(along, "") + br
+	f.left = make([]string, rows)
+	for j := rows - 1; j >= 0; j-- {
+		f.left[j] = next(railDown)
+	}
+	f.topLeft = next(railTopLeft)
+	return f
 }
 
 // glyph draws slot i of n: its changes in their level's color (red, amber,

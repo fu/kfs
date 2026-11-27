@@ -67,6 +67,17 @@ func level(e resources.Change) railLevel {
 // scrolls up. Entries can span several lines (wrapping, extra items). The
 // first line is the divider: divider(title) draws it around the title.
 func (c *changeLog) view(n, width int, divider func(title string) string) string {
+	title, lines := c.body(n, width)
+	if divider == nil {
+		divider = func(t string) string {
+			return dim.Render("─" + t + strings.Repeat("─", max(0, width-1-lipgloss.Width(t))))
+		}
+	}
+	return divider(title) + "\n" + strings.Join(lines, "\n") + "\n"
+}
+
+// body is the pane's title and exactly n lines of entries, wrapped to width.
+func (c *changeLog) body(n, width int) (string, []string) {
 	var shown []resources.Change
 	for _, e := range c.entries {
 		if e.Show == nil || e.Show() {
@@ -80,31 +91,19 @@ func (c *changeLog) view(n, width int, divider func(title string) string) string
 	}
 	c.back = max(0, min(c.back, len(all)-n))
 
-	var b strings.Builder
 	title := fmt.Sprintf(" changes (%d) ", len(shown))
 	if c.back > 0 {
 		title += fmt.Sprintf("▲ scrolled up %d lines (a to go down) ", c.back)
 	}
-	if divider == nil {
-		divider = func(t string) string {
-			return dim.Render("─" + t + strings.Repeat("─", max(0, width-1-lipgloss.Width(t))))
-		}
-	}
-	b.WriteString(divider(title))
-	b.WriteByte('\n')
-
 	end := len(all) - c.back
-	lines := all[max(0, end-n):end]
+	lines := slices.Clone(all[max(0, end-n):end])
 	if len(lines) == 0 {
 		lines = append(lines, dim.Render("  no changes yet — what happens in this namespace appears here"))
 	}
-	for i := 0; i < n; i++ {
-		if i < len(lines) {
-			b.WriteString(lines[i])
-		}
-		b.WriteByte('\n')
+	for len(lines) < n {
+		lines = append(lines, "")
 	}
-	return b.String()
+	return title, lines[:n]
 }
 
 // changeLine formats an entry: time, kind, object, state, detail, and one

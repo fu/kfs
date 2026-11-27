@@ -26,13 +26,68 @@ const sep = "  "
 // lines renders the header and one line per row, the one with key
 // selected highlighted.
 func (t table) lines(selected string, width int) (string, []string) {
+	cols, rows, widths, shown := t.layout(width)
+	hdr := make([]resources.Cell, len(cols))
+	for i, c := range cols {
+		hdr[i] = resources.Cell{Text: c.Title, Tone: resources.Strong}
+	}
+	return t.line(cols, widths, shown, hdr, false, nil, width), t.body(cols, rows, widths, shown, selected, width)
+}
+
+// label is a column title and the cell it starts at, for a frame's border.
+type label struct {
+	x    int
+	text string
+}
+
+// framed renders one line per row like lines, and instead of a header line
+// the column titles with where they start (not the # column's: the numbers
+// say what they are). A right-aligned title ends where its column ends.
+func (t table) framed(selected string, width int) ([]label, []string) {
+	cols, rows, widths, shown := t.layout(width)
+	var labels []label
+	x := 0
+	for i, c := range cols {
+		if !shown[i] {
+			continue
+		}
+		if !(t.number && i == 0) {
+			at := x
+			if c.Right {
+				at += widths[i] - lipgloss.Width(c.Title)
+			}
+			labels = append(labels, label{at, c.Title})
+		}
+		x += widths[i] + len(sep)
+	}
+	return labels, t.body(cols, rows, widths, shown, selected, width)
+}
+
+func (t table) body(cols []resources.Column, rows []resources.Row, widths []int, shown []bool, selected string, width int) []string {
+	out := make([]string, len(rows))
+	for i, r := range rows {
+		var bg lipgloss.TerminalColor
+		switch {
+		case r.Key == selected:
+			bg = selectedBG
+		case t.linked[r.Ref]:
+			bg = linkedBG
+		}
+		out[i] = t.line(cols, widths, shown, r.Cells, r.Struck, bg, width)
+	}
+	return out
+}
+
+// layout is the columns and rows (with the # column), each column's width
+// and which are shown at width.
+func (t table) layout(width int) ([]resources.Column, []resources.Row, []int, []bool) {
 	cols, rows := t.cols, t.rows
 	if t.number {
 		cols = append([]resources.Column{{Title: "#", Right: true}}, cols...)
 		numbered := make([]resources.Row, len(rows))
 		for i, r := range rows {
 			numbered[i] = r
-			numbered[i].Cells = append([]resources.Cell{{Text: fmt.Sprint(i + 1), Tone: resources.Dim}}, r.Cells...)
+			numbered[i].Cells = append([]resources.Cell{{Text: fmt.Sprint(i + 1), Tone: resources.Index}}, r.Cells...)
 		}
 		rows = numbered
 	}
@@ -46,24 +101,7 @@ func (t table) lines(selected string, width int) (string, []string) {
 			}
 		}
 	}
-	shown := fit(cols, widths, width)
-
-	hdr := make([]resources.Cell, len(cols))
-	for i, c := range cols {
-		hdr[i] = resources.Cell{Text: c.Title, Tone: resources.Strong}
-	}
-	out := make([]string, len(rows))
-	for i, r := range rows {
-		var bg lipgloss.TerminalColor
-		switch {
-		case r.Key == selected:
-			bg = selectedBG
-		case t.linked[r.Ref]:
-			bg = linkedBG
-		}
-		out[i] = t.line(cols, widths, shown, r.Cells, r.Struck, bg, width)
-	}
-	return t.line(cols, widths, shown, hdr, false, nil, width), out
+	return cols, rows, widths, fit(cols, widths, width)
 }
 
 // fit makes the columns fit width: shrink the shrinkable ones (to 32 cells),

@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -14,13 +15,16 @@ func TestDefaultYAMLIsComplete(t *testing.T) {
 	if d.Version != Version {
 		t.Errorf("default.yaml is version %d, kfs writes %d", d.Version, Version)
 	}
-	// Every color must come from default.yaml: nothing else fills them.
-	for name, v := range map[string]string{
-		"good": d.Colors.Good, "busy": d.Colors.Busy, "warn": d.Colors.Warn, "bad": d.Colors.Bad, "info": d.Colors.Info,
-		"flash": d.Colors.Flash, "selected": d.Colors.Selected, "linked": d.Colors.Linked, "menu": d.Colors.Menu,
-	} {
-		if v == "" {
-			t.Errorf("default.yaml has no color %q", name)
+	// Every color must come from theme.yaml: nothing else fills them.
+	v := reflect.ValueOf(d.Theme)
+	for i := range v.NumField() {
+		if f := v.Field(i); f.Kind() == reflect.String && f.String() == "" {
+			t.Errorf("theme.yaml has no %s", v.Type().Field(i).Tag.Get("yaml"))
+		}
+	}
+	for _, s := range d.ResourceOrder {
+		if d.Theme.Frames["frame-color-"+s] == "" {
+			t.Errorf("theme.yaml has no frame color for %s", s)
 		}
 	}
 	if !d.StateHidden("pods", "completed") {
@@ -34,11 +38,14 @@ func TestMissingFileStartsAsDefaultYAML(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.Version != Version || c.Colors != Defaults || !c.StateHidden("replicasets", "old") {
+	if c.Version != Version || !reflect.DeepEqual(c.Theme, DefaultTheme()) || !c.StateHidden("replicasets", "old") {
 		t.Errorf("defaults: %+v", c)
 	}
 	if data, err := os.ReadFile(path); err != nil || string(data) != string(defaultYAML) {
 		t.Errorf("the first file is default.yaml, comments and all (%v)", err)
+	}
+	if data, err := os.ReadFile(ThemePath(path)); err != nil || string(data) != string(defaultThemeYAML) {
+		t.Errorf("the first theme is theme.yaml, comments and all (%v)", err)
 	}
 }
 
@@ -66,15 +73,81 @@ func TestStateRoundTrips(t *testing.T) {
 
 func TestMissingKeysTakeDefaults(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	// No hide, no version, just one color.
-	os.WriteFile(path, []byte("sections:\n  hidden: [secrets]\ncolors:\n  linked: \"#123456\"\n"), 0o644)
+	// No hide, no version; a theme with just one color.
+	os.WriteFile(path, []byte("sections:\n  hidden: [secrets]\n"), 0o644)
+	os.WriteFile(ThemePath(path), []byte("row-referenced: \"#123456\"\n"), 0o644)
 	c, err := Load(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if c.Version != Version || !c.Hidden("secrets") || !c.StateHidden("pods", "completed") ||
-		c.Colors.Linked != "#123456" || c.Colors.Good != Defaults.Good {
+		c.Theme.RowReferenced != "#123456" || c.Theme.StatusOK != DefaultTheme().StatusOK {
 		t.Errorf("filled: %+v", c)
+	}
+}
+
+// A theme from an older kfs gets the colors it lacks added, and keeps its
+// own (and its comments).
+func TestThemeGetsNewColors(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	old := "# mine\nmenu: '#111111'\n"
+	os.WriteFile(ThemePath(path), []byte(old), 0o644)
+	c, _ := Load(path)
+	if c.ThemeErr != nil || c.Theme.Menu != "#111111" || c.Theme.FrameColor("pods") != DefaultTheme().FrameColor("pods") {
+		t.Fatalf("theme: %v %+v", c.ThemeErr, c.Theme)
+	}
+	data, _ := os.ReadFile(ThemePath(path))
+	if !strings.HasPrefix(string(data), old) || !strings.Contains(string(data), "frame-color-pods:") || strings.Count(string(data), "\nmenu:") != 1 {
+		t.Errorf("theme file:\n%s", data)
+	}
+	if c2, _ := Load(path); c2.ThemeErr != nil || !reflect.DeepEqual(c2.Theme, c.Theme) {
+		t.Errorf("reloaded: %v", c2.ThemeErr)
+	}
+	if after, _ := os.ReadFile(ThemePath(path)); string(after) != string(data) {
+		t.Error("a complete theme is left alone")
+	}
+}
+
+// A version 2 file's colors move to theme.yaml, and leave config.yaml.
+func TestColorsMoveToTheme(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	os.WriteFile(path, []byte("version: 2\ncolors:\n  linked: \"#123456\"\n  bad: \"#ff0000\"\n"), 0o644)
+	c, err := Load(path)
+	if err != nil || c.ThemeErr != nil {
+		t.Fatal(err, c.ThemeErr)
+	}
+	if c.Theme.RowReferenced != "#123456" || c.Theme.StatusFailed != "#ff0000" || c.Theme.Menu != DefaultTheme().Menu {
+		t.Errorf("theme: %+v", c.Theme)
+	}
+	if data, _ := os.ReadFile(path); strings.Contains(string(data), "colors") {
+		t.Errorf("config.yaml keeps its colors:\n%s", data)
+	}
+	if c, _ := Load(path); c.Theme.RowReferenced != "#123456" {
+		t.Errorf("theme.yaml was not written: %+v", c.Theme)
+	}
+}
+
+// Version 3 moves the old default keys to the k9s-like ones, but not keys
+// the user chose.
+func TestUpgradeToK9sKeys(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	os.WriteFile(path, []byte(`version: 2
+commands:
+  "*": {describe: d, copy: y}
+  pods: {logs: l enter, shell: h, forward: p}
+  secrets: {open: enter}
+`), 0o644)
+	c, _ := Load(path)
+	for _, tc := range []struct{ section, command, want string }{
+		{"pods", "describe", "enter"},
+		{"pods", "logs", "l"},
+		{"pods", "shell", "s"},
+		{"pods", "forward", "p"}, // the user's own
+		{"secrets", "extract", "x"},
+	} {
+		if got := strings.Join(c.CommandKeys(tc.section, tc.command), " "); got != tc.want {
+			t.Errorf("%s %s: keys %q, want %q", tc.section, tc.command, got, tc.want)
+		}
 	}
 }
 
@@ -82,7 +155,7 @@ func TestCommandKeys(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	// The user remaps shell, adds yaml everywhere, turns off describe for
 	// secrets (and so drops open), and says nothing about claims.
-	os.WriteFile(path, []byte(`version: 1
+	os.WriteFile(path, []byte(`version: 3
 commands:
   "*": {describe: d, yaml: y}
   pods: {shell: x, logs: l enter}
@@ -101,7 +174,7 @@ commands:
 		{"pods", "describe", "d"},
 		{"pods", "yaml", "y"},
 		{"secrets", "describe", ""}, // turned off for secrets
-		{"secrets", "open", ""},     // the user's secrets section has no open
+		{"secrets", "extract", ""},  // the user's secrets section has no extract
 		{"claims", "describe", "d"},
 	} {
 		if got := strings.Join(c.CommandKeys(tc.section, tc.command), " "); got != tc.want {
@@ -109,7 +182,7 @@ commands:
 		}
 	}
 	// A config without commands gets the defaults.
-	if got := Default().CommandKeys("pods", "shell"); len(got) != 1 || got[0] != "h" {
+	if got := Default().CommandKeys("pods", "shell"); len(got) != 1 || got[0] != "s" {
 		t.Errorf("default shell key: %v", got)
 	}
 }

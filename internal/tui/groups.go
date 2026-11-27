@@ -8,29 +8,90 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// What kfs offers comes in groups. The header has a line for each, the logo
-// down its left edge; the footer has the keys that work the TUI itself:
+// The header is a frame like the resources', in the theme's frame-color-kfs:
+// what is watched in its top border, inside the resources by their keys,
+// each a chip with its name after it (wrapped when they do not fit), and
+// the scopes in its bottom border, like the commands at the bottom of the
+// selected row's frame (commandItems). The footer has the keys that work
+// the TUI itself:
 //
-//	k │ status: context, namespace, filter, watching                statusLine
-//	f │ scopes, every row's commands │ the row's kind's own         commandLine
-//	s │ the sections, shown or hidden                              sectionLine
-//	    … sections, change log …
-//	    the TUI's own keys                                         footer
+//	┌┐ kfs ┌┐ctx: dev┌┐ns: shop┌┐filter: none┌──────────┐● watching┌┐   statusLine
+//	│ F1 gitops  F2 deployments  …  F10 secrets                      │   keyLines
+//	└┘ 1 contexts  2 namespaces  3 filter └───────────────────────────┘   scopeItems
+//	    … resources, change log …
+//	    the TUI's own keys                                               footer
 
-const (
-	logo        = "kfs" // a letter per header line
-	headerLines = len(logo)
-	footerLines = 1
-)
+const footerLines = 1
 
-// logoCell is the logo's letter at the start of header line i.
-func logoCell(i int) string { return badge.Render(logo[i:i+1]) + " " }
-
-func (m *model) headerView() string {
-	return m.statusLine() + "\n" + m.commandLine() + "\n" + m.sectionLine()
+func (m *model) header() []string {
+	c := frameStyle("kfs")
+	out := []string{m.statusLine()}
+	for _, l := range m.keyLines() {
+		out = append(out, frameRow(c, c.Render("│"), l, m.width))
+	}
+	return append(out, frameBottom(c, m.scopeItems(), nil, m.width))
 }
 
-// ---- f: scopes and commands ----------------------------------------------------
+func (m *model) headerView() string { return strings.Join(m.header(), "\n") }
+
+// headerLines is how many lines the header takes at the current width.
+func (m *model) headerLines() int { return len(m.header()) }
+
+// frameBar is a top border with items in notches: left ones from the left,
+// right ones at the right end (dropped first when it does not fit).
+func frameBar(c lipgloss.Style, left, right []string, width int) string {
+	notches := func(items []string) string {
+		var b strings.Builder
+		for _, it := range items {
+			b.WriteString(c.Render("┐") + it + c.Render("┌"))
+		}
+		return b.String()
+	}
+	l := c.Render("┌") + notches(left)
+	r := notches(right) + c.Render("┐")
+	if gap := width - lipgloss.Width(l) - lipgloss.Width(r); gap >= 0 {
+		return l + c.Render(strings.Repeat("─", gap)) + r
+	}
+	l = clip(l, max(0, width-1))
+	return l + c.Render(strings.Repeat("─", max(0, width-1-lipgloss.Width(l)))+"┐")
+}
+
+// part is one entry of a header line and what separates it from the one
+// before.
+type part struct{ text, sep string }
+
+const thinSep = "  "
+
+// flow lays parts out after a space, wrapping before a part that does not
+// fit in width.
+func flow(parts []part, width int) []string {
+	var lines []string
+	line, w := " ", 1
+	for i, p := range parts {
+		pw := lipgloss.Width(p.text)
+		sep := p.sep
+		if i > 0 && w+lipgloss.Width(sep)+pw > width && w > 1 {
+			lines = append(lines, line)
+			line, sep = " ", ""
+		} else if i == 0 {
+			sep = ""
+		}
+		line += sep + p.text
+		w = lipgloss.Width(line)
+	}
+	return append(lines, line)
+}
+
+// chip is a key on its ground, followed by what it does: plain while on,
+// dim while off (a hidden resource).
+func chip(key, name string, keyColor lipgloss.Color, on bool) string {
+	k := lipgloss.NewStyle().Background(chipGround).Foreground(keyColor).Bold(true)
+	n := plain
+	if !on {
+		k, n = k.Foreground(dim.GetForeground()).Bold(false), dim
+	}
+	return k.Render(" "+key+" ") + n.Render(" "+name)
+}
 
 // scope changes what the page shows, through a picker.
 type scope struct {
@@ -40,66 +101,38 @@ type scope struct {
 
 func scopes() []scope {
 	return []scope{
-		{"contexts", "c", (*model).openContexts},
-		{"namespaces", "n", (*model).openNamespaces},
-		{"filter", "f", (*model).openFilter},
+		{"contexts", "1", (*model).openContexts},
+		{"namespaces", "2", (*model).openNamespaces},
+		{"filter", "3", (*model).openFilter},
 	}
 }
 
-// commandLine: the scopes and the commands every row has (rowCommands),
-// then those the selected row's kind adds. A screen takes every key, so
-// over one only the scopes show, the open one lit.
-func (m *model) commandLine() string {
+// keyLines: every resource by its toggle key (F1, F2, …), dim while
+// hidden.
+func (m *model) keyLines() []string {
+	var parts []part
+	for i, k := range m.kinds {
+		parts = append(parts, part{chip(keyLabel(sectionKey(i)), k.Name(), globalKey, m.page.shown(k)), thinSep})
+	}
+	return flow(parts, max(1, m.width-2))
+}
+
+// scopeItems are the scopes for the header's bottom border, their keys lit,
+// the open one on the menu ground.
+func (m *model) scopeItems() []string {
 	open := ""
 	if p, ok := m.top().(*pickerScreen); ok {
 		open = p.scope
 	}
-	var items []string
+	var out []string
 	for _, s := range scopes() {
 		st := plain
 		if s.name == open {
 			st = menu
 		}
-		items = append(items, item(commandHint(s.name, s.key), st))
-	}
-	line := joinParts(items)
-	if m.top() == nil {
-		every, own := m.rowCommands()
-		line = joinParts(append(items, actionItems(every)...))
-		if k, _ := m.selection(); len(own) > 0 {
-			// Set apart: the heavier rule, and whose commands they are.
-			line += dim.Render(" ┃ ") + header.Render(k.Name()) + " " + joinParts(actionItems(own))
-		}
-	}
-	return clip(logoCell(1)+line, m.width)
-}
-
-// actionItems are the commands' items (a command on several keys once).
-func actionItems(as []action) []string {
-	var out []string
-	for _, a := range as {
-		if a.hint != "" {
-			out = append(out, item(a.hint, plain))
-		}
+		out = append(out, marked(commandHint(s.name, s.key), st, globalKey))
 	}
 	return out
-}
-
-// ---- s: sections -----------------------------------------------------------------
-
-// sectionLine: every section by its toggle key, on a grey ground while
-// shown; Shift+its key sorts it.
-func (m *model) sectionLine() string {
-	var items []string
-	for _, k := range m.kinds {
-		st := dim
-		if m.page.shown(k) {
-			st = menu
-		}
-		items = append(items, item(commandHint(k.Name(), toggleKey(k)), st))
-	}
-	items = append(items, hints("[shift+key] sort column"))
-	return clip(logoCell(2)+joinParts(items), m.width)
 }
 
 // ---- footer: the TUI's own keys --------------------------------------------------
@@ -134,7 +167,6 @@ func tuiKeys() []tuiKey {
 		{keys: "end", do: run(func(m *model) { m.moveSelection(1 << 30) })},
 		{keys: "tab", hint: "[tab] next section", do: run(func(m *model) { m.moveSection(1) })},
 		{keys: "shift+tab", do: run(func(m *model) { m.moveSection(-1) })},
-		{match: isDigit, hint: "[0-9] row #", do: func(m *model, key string) tea.Cmd { m.jumpTo(key); return nil }},
 		{keys: "q", hint: "[q/a] scroll changes", do: run(func(m *model) { m.changes.back++ })}, // the pane clamps it
 		{keys: "a", do: run(func(m *model) { m.changes.back = max(0, m.changes.back-1) })},
 		{keys: "+", hint: "[+/−] resize", do: run(func(m *model) { m.moveDivider(1) })},
@@ -167,8 +199,3 @@ func (m *model) footer(keys string) string {
 // ---- items -----------------------------------------------------------------------
 
 var plain = lipgloss.NewStyle()
-
-// item is an entry of a header line in st (plain, dim while hidden, menu's
-// grey ground while on): the hint with its key in cyan, "s[h]ell". The
-// entries of a line are joined like the status line's parts (joinParts).
-func item(hint string, st lipgloss.Style) string { return marked(hint, st) }

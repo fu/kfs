@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -11,29 +12,57 @@ import (
 
 // Every color kfs uses, and the text helpers all screens draw with.
 
+// Set from the theme (theme.yaml).
 var (
-	header = lipgloss.NewStyle().Bold(true)
-	dim    = lipgloss.NewStyle().Faint(true)
-	struck = lipgloss.NewStyle().Faint(true).Strikethrough(true)
-
-	// Set from the palette (config colors).
-	badge, green, yellow, amber, red, cyan, flash, menu lipgloss.Style
-	selectedBG, linkedBG, infoColor                     lipgloss.Color
+	header, dim, struck                                        lipgloss.Style
+	badge, green, yellow, amber, red, cyan, flash, menu, index lipgloss.Style
+	selectedBG, linkedBG, globalKey, commandKey, pulseColor    lipgloss.Color
+	chipGround                                                 lipgloss.Color
 )
 
-func init() { setPalette(config.Defaults) }
+func init() { setPalette(config.DefaultTheme()) }
 
-// setPalette sets the colors: the defaults, or the config's.
-func setPalette(c config.Colors) {
+// setPalette sets the colors: the defaults, or the theme's.
+func setPalette(t config.Theme) {
 	col := func(s string) lipgloss.Color { return lipgloss.Color(s) }
 	fg := func(s string) lipgloss.Style { return lipgloss.NewStyle().Foreground(col(s)) }
-	green, amber, yellow, red, cyan = fg(c.Good), fg(c.Busy), fg(c.Warn), fg(c.Bad), fg(c.Info)
-	infoColor = col(c.Info)
-	black, light := col("#000000"), col("#bcbcbc") // text on the colored backgrounds
-	badge = lipgloss.NewStyle().Bold(true).Foreground(black).Background(infoColor).Padding(0, 1)
-	flash = lipgloss.NewStyle().Bold(true).Foreground(black).Background(col(c.Flash))
-	menu = lipgloss.NewStyle().Foreground(light).Background(col(c.Menu))
-	selectedBG, linkedBG = col(c.Selected), col(c.Linked)
+	green, amber, yellow, red, cyan = fg(t.StatusOK), fg(t.StatusBusy), fg(t.StatusWarn), fg(t.StatusFailed), fg(t.Info)
+	index = fg(t.Index)
+	globalKey, commandKey = col(t.KeyGlobal), col(t.KeyCommand)
+	header = fg(t.TextHeading).Bold(true)
+	dim = fg(t.TextDim)
+	struck = dim.Strikethrough(true)
+	onColor := col(t.TextOnColor)
+	badge = lipgloss.NewStyle().Bold(true).Foreground(onColor).Background(col(t.Badge)).Padding(0, 1)
+	chipGround = col(t.Menu)
+	flash = lipgloss.NewStyle().Bold(true).Foreground(onColor).Background(col(t.Flash))
+	menu = lipgloss.NewStyle().Foreground(col(t.TextMenu)).Background(col(t.Menu))
+	selectedBG, linkedBG = col(t.RowHighlighted), col(t.RowReferenced)
+	setRailPalette(t)
+	pulseColor = col(t.Pulse)
+	theme = t
+}
+
+// theme is the theme the palette was set from, for the per-section frames.
+var theme config.Theme
+
+// frameStyle is the color of a section's frame.
+func frameStyle(section string) lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(theme.FrameColor(section)))
+}
+
+// shade is color c ("#rrggbb") at f of its brightness (0–1); other colors
+// (ANSI numbers) cannot be shaded and stay as they are.
+func shade(c string, f float64) lipgloss.Color {
+	var r, g, b int
+	if len(c) != 7 || c[0] != '#' {
+		return lipgloss.Color(c)
+	}
+	if _, err := fmt.Sscanf(c, "#%02x%02x%02x", &r, &g, &b); err != nil {
+		return lipgloss.Color(c)
+	}
+	s := func(v int) int { return min(255, int(float64(v)*f+0.5)) }
+	return lipgloss.Color(fmt.Sprintf("#%02x%02x%02x", s(r), s(g), s(b)))
 }
 
 // style is the color of a tone.
@@ -59,6 +88,8 @@ func style(t resources.Tone) lipgloss.Style {
 		return green.Bold(true)
 	case resources.Strong:
 		return header
+	case resources.Index:
+		return index
 	}
 	return lipgloss.NewStyle()
 }
@@ -133,25 +164,15 @@ func wrap(s string, width, first, rest int) []string {
 // clip cuts a styled line to w cells without breaking ANSI sequences.
 func clip(s string, w int) string { return lipgloss.NewStyle().MaxWidth(w).Render(s) }
 
-// alignLR puts left at the left edge and right at the right edge of a
-// w-cell line, padding the middle with spaces. If they do not both fit, the
-// line is clipped (left wins; right is what gets cut).
-func alignLR(left, right string, w int) string {
-	gap := w - lipgloss.Width(left) - lipgloss.Width(right)
-	if gap < 0 {
-		gap = 0
-	}
-	return clip(left+strings.Repeat(" ", gap)+right, w)
-}
-
-// hints renders commands: the part in [brackets] is the key and shows in
-// cyan (ideally a letter of the word, as in "s[h]ell"), the rest dim.
-func hints(s string) string { return marked(s, dim) }
+// hints renders keys that work everywhere: the part in [brackets] is the
+// key and shows in the global key color (ideally a letter of the word, as in
+// "[l]ogs"), the rest dim.
+func hints(s string) string { return marked(s, dim, globalKey) }
 
 // marked renders s in text's style, the parts in [brackets] (the keys) in
-// cyan on the same ground.
-func marked(s string, text lipgloss.Style) string {
-	key := text.Faint(false).Foreground(infoColor)
+// color key on the same ground.
+func marked(s string, text lipgloss.Style, keyColor lipgloss.Color) string {
+	key := text.Faint(false).Foreground(keyColor)
 	var b strings.Builder
 	for {
 		i, j := strings.IndexByte(s, '['), strings.IndexByte(s, ']')

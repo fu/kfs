@@ -49,7 +49,6 @@ type (
 )
 
 func (r *Resource) Name() string      { return "configmaps" }
-func (r *Resource) Key() string       { return "o" } // c is contexts
 func (r *Resource) Tag() string       { return "cm" }
 func (r *Resource) Objects() []string { return []string{"ConfigMap"} }
 func (r *Resource) GVR() schema.GroupVersionResource {
